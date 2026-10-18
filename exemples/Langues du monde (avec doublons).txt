@@ -1,0 +1,46 @@
+# Blind test « Langues du monde » : 35 chansons, 24 langues, dont 11 qui reviennent deux fois.
+# Une langue peut donc être la bonne réponse plusieurs fois : impossible de jouer par élimination.
+# Format : Artiste - Titre | Langue | Famille
+# Deux titres de la même famille ne passent jamais à la suite (le programme réordonne).
+# Les 5 dernières lignes sont des remplaçants, utilisés seulement si un titre manque sur Deezer.
+PSY - Gangnam Style | Coréen | asie de l'est
+Luis Fonsi - Despacito | Espagnol | romane
+Nena - 99 Luftballons | Allemand | germanique
+Tarkan - Şımarık | Turc | turque
+t.A.T.u. - Ya Soshla S Uma | Russe | slave
+Khaled - Didi | Arabe | sémitique
+Master KG - Jerusalema | Zoulou | bantoue
+A.R. Rahman - Jai Ho | Hindi | indienne
+Loituma - Ievan Polkka | Finnois | finno-ougrienne
+Despina Vandi - Gia | Grec | grecque
+Michel Teló - Ai Se Eu Te Pego | Portugais | romane
+Kyu Sakamoto - Sukiyaki | Japonais | asie de l'est
+Rammstein - Du hast | Allemand | germanique
+Idir - A Vava Inouva | Kabyle | berbère
+Kalush Orchestra - Stefania | Ukrainien | slave
+Ofra Haza - Im Nin'alu | Hébreu | sémitique
+Enrique Iglesias - Bailando | Espagnol | romane
+BLACKPINK - DDU-DU DDU-DU | Coréen | asie de l'est
+Daler Mehndi - Tunak Tunak Tun | Pendjabi | indienne
+Sigur Rós - Hoppípolla | Islandais | germanique
+Tarkan - Dudu | Turc | turque
+Them Mushrooms - Jambo Bwana | Swahili | bantoue
+Kino - Gruppa Krovi | Russe | slave
+Nancy Ajram - Ah W Noss | Arabe | sémitique
+Måneskin - Zitti e buoni | Italien | romane
+Utada Hikaru - First Love | Japonais | asie de l'est
+Édith Piaf - La vie en rose | Français | romane
+Donatan - My Słowianie | Polonais | slave
+Snollebollekes - Links rechts | Néerlandais | germanique
+Kaoma - Lambada | Portugais | romane
+Teresa Teng - The Moon Represents My Heart | Mandarin | asie de l'est
+Stromae - Alors on danse | Français | romane
+O-Zone - Dragostea Din Tei | Roumain | romane
+Domenico Modugno - Nel blu dipinto di blu | Italien | romane
+Michael Jackson - Billie Jean | Anglais | germanique
+# remplaçants
+Freddie Aguilar - Anak | Tagalog | austronésienne
+Googoosh - Do Panjereh | Persan | iranienne
+Lena Philipsson - Det gör ont | Suédois | germanique
+Marija Šerifović - Molitva | Serbe | slave
+Sau - Boig per tu | Catalan | romane

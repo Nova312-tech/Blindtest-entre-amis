@@ -1,0 +1,937 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Blind test — atelier</title>
+<style>
+  :root {
+    --fond: #05061a; --carte: rgba(14, 16, 46, .92); --bord: rgba(70, 210, 255, .22);
+    --cyan: #46d2ff; --violet: #c7a2ff; --texte: #f4f6ff; --doux: #a9b3d9; --rose: #ff6ec7;
+    --vert: #2fbf71; --rouge: #ff6b8a; --jaune: #f2b632;
+  }
+  * { box-sizing: border-box; }
+  html { background: var(--fond); }
+  body { margin: 0; min-height: 100vh; color: var(--texte); font: 15px/1.45 "Segoe UI", system-ui, sans-serif;
+    background: radial-gradient(110% 70% at 50% -10%, #1d1652 0%, var(--fond) 62%) fixed; }
+  [hidden] { display: none !important; }
+  a { color: var(--cyan); }
+  main { max-width: 1180px; margin: 0 auto; padding: 20px 16px 48px; }
+  header { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 18px; }
+  header h1 { margin: 0; font: 900 26px "Segoe UI Black", "Segoe UI", sans-serif; letter-spacing: .01em;
+    text-shadow: 0 0 18px rgba(70, 210, 255, .45); }
+  header h1 span { color: var(--cyan); }
+  .grille { display: grid; grid-template-columns: minmax(0, 1.05fr) minmax(0, 1fr); gap: 16px; align-items: start; }
+  @media (max-width: 860px) { .grille { grid-template-columns: minmax(0, 1fr); } }
+  .carte { background: var(--carte); border: 1px solid var(--bord); border-radius: 16px; padding: 18px;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, .35); }
+  .carte + .carte { margin-top: 16px; }
+  h2 { margin: 0 0 14px; font: 700 13px Bahnschrift, "Segoe UI", sans-serif; letter-spacing: .14em;
+    text-transform: uppercase; color: var(--cyan); }
+  .champ { margin-bottom: 16px; }
+  .champ > label, .champ > .titre { display: block; font-weight: 700; margin-bottom: 6px; }
+  .aide { color: var(--doux); font-size: 13px; margin-top: 6px; }
+  .puces { display: flex; flex-wrap: wrap; gap: 8px; }
+  .puces button { font: 700 15px "Segoe UI", sans-serif; color: var(--texte); background: rgba(255, 255, 255, .05);
+    border: 1px solid rgba(255, 255, 255, .16); border-radius: 10px; padding: 9px 14px; cursor: pointer; }
+  .puces button:hover { border-color: var(--cyan); }
+  .puces button[aria-pressed="true"] { background: var(--cyan); color: var(--fond); border-color: var(--cyan);
+    box-shadow: 0 0 14px rgba(70, 210, 255, .45); }
+  .puces.usage button { flex: 1 1 140px; text-align: left; }
+  .puces.usage button small { display: block; font-weight: 500; font-size: 12px; opacity: .8; }
+  input[type=number], input[type=text], textarea, select {
+    font: 15px "Segoe UI", sans-serif; color: var(--texte); background: rgba(255, 255, 255, .06);
+    border: 1px solid rgba(255, 255, 255, .18); border-radius: 10px; padding: 9px 11px; width: 100%; }
+  textarea { resize: vertical; min-height: 64px; }
+  input:focus, textarea:focus, select:focus, button:focus-visible { outline: 2px solid var(--cyan); outline-offset: 1px; }
+  select option { background: #10123a; }
+  input[type=number] { width: 110px; }
+  .ligne { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+  .champ.ligne { align-items: flex-end; gap: 16px; }
+  .champ.ligne label { display: block; font-weight: 700; margin-bottom: 6px; }
+  .detecte { margin-top: 6px; font-size: 13px; font-weight: 600; color: var(--violet); min-height: 19px; }
+  .detecte.erreur { color: var(--rouge); }
+  details.avance { border-top: 1px solid rgba(255, 255, 255, .1); padding-top: 12px; margin: 4px 0 16px; }
+  details.avance summary { cursor: pointer; color: var(--doux); font-weight: 600; }
+  details.avance .champ { margin: 12px 0 0; }
+  .case { display: flex; gap: 8px; align-items: flex-start; cursor: pointer; }
+  .case input { margin-top: 3px; accent-color: var(--cyan); }
+  .bouton { font: 800 15px "Segoe UI", sans-serif; border: 0; border-radius: 10px; padding: 11px 18px; cursor: pointer;
+    background: var(--cyan); color: var(--fond); box-shadow: 0 0 16px rgba(70, 210, 255, .35);
+    text-decoration: none; display: inline-block; }
+  .bouton:disabled { opacity: .35; cursor: default; box-shadow: none; }
+  .bouton.large { width: 100%; padding: 14px; font-size: 17px; }
+  .bouton.discret { background: rgba(255, 255, 255, .07); color: var(--texte); box-shadow: none;
+    border: 1px solid rgba(255, 255, 255, .16); font-weight: 700; }
+  .bouton.discret:hover { border-color: var(--cyan); }
+  .bouton.danger { background: rgba(255, 107, 138, .14); color: var(--rouge); border: 1px solid rgba(255, 107, 138, .5); box-shadow: none; }
+  .bouton.petit { padding: 6px 11px; font-size: 13px; }
+  .erreurForm { color: var(--rouge); font-weight: 600; margin-top: 10px; min-height: 20px; }
+
+  /* fabrication */
+  .vide { color: var(--doux); }
+  .tacheTitre { font-weight: 800; font-size: 16px; }
+  .etape { color: var(--violet); font-weight: 700; margin: 10px 0 6px; display: flex; justify-content: space-between; gap: 8px; }
+  .barre { height: 10px; background: rgba(255, 255, 255, .08); border-radius: 99px; overflow: hidden; }
+  .barre > div { height: 100%; width: 0; background: linear-gradient(90deg, var(--cyan), var(--violet));
+    border-radius: 99px; transition: width .4s; }
+  .barre.indet > div { width: 35%; animation: va 1.4s ease-in-out infinite; }
+  @keyframes va { from { margin-left: -35%; } to { margin-left: 100%; } }
+  pre.journal { background: rgba(0, 0, 0, .35); border-radius: 10px; padding: 10px; max-height: 260px; overflow: auto;
+    font: 12px/1.45 Consolas, "Cascadia Mono", monospace; color: #cfd6f5; white-space: pre-wrap; margin: 10px 0 0; }
+  details.jdetails summary { cursor: pointer; color: var(--doux); font-size: 13px; margin-top: 12px; }
+  .bilan { border-radius: 12px; padding: 12px 14px; margin-top: 12px; }
+  .bilan.ok { background: rgba(47, 191, 113, .12); border: 1px solid rgba(47, 191, 113, .5); }
+  .bilan.ko { background: rgba(255, 107, 138, .1); border: 1px solid rgba(255, 107, 138, .5); }
+  .bilan b { font-size: 16px; }
+  .actions { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 12px; }
+
+  /* partie */
+  .partieInfo { display: grid; grid-template-columns: auto 1fr; gap: 4px 14px; margin-bottom: 12px; }
+  .partieInfo dt { color: var(--doux); }
+  .partieInfo dd { margin: 0; font-weight: 600; overflow-wrap: anywhere; }
+  .alerte { background: rgba(242, 182, 50, .12); border: 1px solid rgba(242, 182, 50, .55); color: #ffe2a0;
+    border-radius: 12px; padding: 10px 12px; margin-bottom: 12px; font-weight: 600; }
+
+  /* lots */
+  .lots { list-style: none; margin: 0; padding: 0; }
+  .lot { display: flex; gap: 12px; align-items: center; justify-content: space-between; flex-wrap: wrap;
+    padding: 12px 0; border-top: 1px solid rgba(255, 255, 255, .08); }
+  .lot:first-child { border-top: 0; }
+  .lot .nom { font-weight: 800; overflow-wrap: anywhere; }
+  .lot .meta { color: var(--doux); font-size: 13px; }
+  .lot > div:first-child { min-width: 0; flex: 1 1 280px; }
+  .badges { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 5px; }
+  .badge { font-size: 12px; font-weight: 700; border-radius: 99px; padding: 2px 9px; border: 1px solid; }
+  .badge.vert { color: #7ff0b0; border-color: rgba(47, 191, 113, .6); }
+  .badge.gris { color: var(--doux); border-color: rgba(255, 255, 255, .2); }
+  .badge.jaune { color: #ffd77a; border-color: rgba(242, 182, 50, .6); }
+  .badge.cyan { color: var(--cyan); border-color: rgba(70, 210, 255, .6); }
+  .groupe { margin-top: 18px; color: var(--doux); font-weight: 700; font-size: 13px; letter-spacing: .08em; text-transform: uppercase; }
+  details.archives summary { cursor: pointer; }
+
+  dialog { background: #0d0f33; color: var(--texte); border: 1px solid var(--bord); border-radius: 16px; padding: 20px;
+    width: min(560px, calc(100vw - 32px)); box-shadow: 0 20px 60px rgba(0, 0, 0, .6); }
+  dialog.large { width: min(860px, calc(100vw - 32px)); }
+  dialog::backdrop { background: rgba(2, 3, 14, .7); }
+  dialog h3 { margin: 0 0 12px; }
+  dialog pre { background: rgba(0, 0, 0, .35); border-radius: 10px; padding: 12px; max-height: 65vh; overflow: auto;
+    white-space: pre-wrap; font: 13px/1.5 Consolas, monospace; margin: 0; }
+  .choixConnexion label { display: flex; gap: 10px; align-items: flex-start; padding: 10px 12px; border-radius: 10px;
+    border: 1px solid rgba(255, 255, 255, .14); margin-bottom: 8px; cursor: pointer; }
+  .choixConnexion label:has(input:checked) { border-color: var(--cyan); background: rgba(70, 210, 255, .08); }
+  .choixConnexion input { accent-color: var(--cyan); margin-top: 4px; }
+  .choixConnexion small { display: block; color: var(--doux); }
+  /* aperçu de la sélection */
+  .apResume { display: flex; gap: 12px; flex-wrap: wrap; align-items: baseline; margin-bottom: 10px; }
+  .apResume b { font-size: 18px; }
+  .apBloc { margin-top: 14px; }
+  .apBloc > summary, .apBloc > .titre { cursor: pointer; font-weight: 700; color: var(--doux); margin-bottom: 6px; }
+  .pistes { list-style: none; margin: 0; padding: 0; columns: 2 340px; column-gap: 24px; }
+  .pistes li { break-inside: avoid; display: flex; gap: 8px; align-items: center; padding: 4px 0; font-size: 14px; }
+  .pistes li.retire { opacity: .4; text-decoration: line-through; }
+  .pistes li.remplacant .txt { color: var(--doux); }
+  .pistes li.separateur { color: var(--cyan); font-weight: 700; font-size: 12px; letter-spacing: .08em;
+    text-transform: uppercase; column-span: all; padding-top: 10px; }
+  .pistes .num { color: var(--doux); min-width: 26px; text-align: right; font-variant-numeric: tabular-nums; }
+  .pistes .txt { min-width: 0; overflow-wrap: anywhere; }
+  .pistes input { accent-color: var(--cyan); }
+  .lecture { flex: none; width: 30px; height: 30px; border-radius: 50%; border: 1px solid rgba(255, 255, 255, .25);
+    background: rgba(255, 255, 255, .06); color: var(--texte); cursor: pointer; font-size: 12px; line-height: 1; }
+  .lecture:hover, .lecture.joue { border-color: var(--cyan); color: var(--cyan); }
+  .listePl { list-style: none; margin: 0; padding: 0; }
+  .listePl li { padding: 3px 0; font-size: 14px; }
+  .listePl small, .petitgris { color: var(--doux); font-size: 12px; }
+  .barreActions { position: sticky; bottom: 0; background: var(--carte); padding: 12px 0 2px; margin-top: 12px;
+    border-top: 1px solid rgba(255, 255, 255, .08); display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
+
+  /* éditeur de réponses */
+  dialog.editeur { width: min(1100px, calc(100vw - 24px)); max-height: calc(100vh - 24px); padding: 18px 18px 0; }
+  .edLigne { display: grid; grid-template-columns: 34px 34px minmax(0, 1fr) auto; gap: 10px; align-items: start;
+    padding: 10px 0; border-top: 1px solid rgba(255, 255, 255, .08); }
+  .edLigne .num { font: 700 15px Bahnschrift, sans-serif; color: var(--cyan); padding-top: 8px; }
+  .edChamps { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 8px; }
+  .edChamps label { font-size: 11px; color: var(--doux); display: block; }
+  .edChamps input { padding: 6px 8px; font-size: 14px; }
+  .edLigne.change { background: rgba(70, 210, 255, .05); }
+  .edLigne.change .num::after { content: " •"; color: var(--jaune); }
+  .edAlerte { grid-column: 3 / -1; font-size: 12px; color: #ffd77a; }
+  .edRecherche { grid-column: 3 / -1; background: rgba(0, 0, 0, .25); border-radius: 10px; padding: 10px; }
+  .edRecherche ul { list-style: none; margin: 8px 0 0; padding: 0; max-height: 260px; overflow: auto; }
+  .edRecherche li { display: flex; gap: 8px; align-items: center; padding: 4px 0; font-size: 14px; }
+  .edRecherche li .txt { flex: 1; min-width: 0; overflow-wrap: anywhere; }
+  @media (max-width: 640px) { .edLigne { grid-template-columns: 28px 30px minmax(0, 1fr); } .edLigne > .edBoutons { grid-column: 3; } }
+
+  #deconnecte { position: sticky; top: 0; z-index: 5; background: #4a1630; color: #ffd0dc; text-align: center;
+    padding: 10px 16px; font-weight: 700; }
+</style>
+</head>
+<body>
+<div id="deconnecte" hidden></div>
+<main>
+  <header>
+    <h1>Blind test <span>· atelier</span></h1>
+    <button class="bouton discret petit" id="quitter" type="button">Quitter</button>
+  </header>
+
+  <div class="grille">
+    <!-- 1. nouveau blind test -->
+    <section class="carte" aria-labelledby="tNouveau">
+      <h2 id="tNouveau">Nouveau blind test</h2>
+      <form id="form" novalidate>
+        <div class="champ">
+          <span class="titre">Temps pour deviner</span>
+          <div class="puces" id="durees" role="group" aria-label="Temps pour deviner"></div>
+          <div class="ligne" id="ligneAutre" hidden style="margin-top:8px">
+            <input type="number" id="dureeLibre" min="5" max="30" step="1" aria-label="Durée en secondes"> secondes
+          </div>
+          <div class="aide" id="aideDuree"></div>
+        </div>
+
+        <div class="champ">
+          <label for="source">Thème ou playlist</label>
+          <textarea id="source" rows="2" spellcheck="false"
+            placeholder="Ex. : années 80, comédies musicales, rap français…&#10;ou collez un lien de playlist Deezer ou Spotify&#10;ou une liste « Artiste - Titre », un titre par ligne"></textarea>
+          <div class="detecte" id="detecte" aria-live="polite"></div>
+        </div>
+
+        <div class="champ">
+          <span class="titre">C'est pour…</span>
+          <div class="puces usage" id="usages" role="group" aria-label="Usage">
+            <button type="button" data-usage="quiz">Quiz sur téléphones<small>son seul + 4 propositions</small></button>
+            <button type="button" data-usage="video">Vidéo YouTube<small>montage complet</small></button>
+            <button type="button" data-usage="les_deux">Les deux<small>plus long</small></button>
+          </div>
+        </div>
+
+        <div class="champ ligne">
+          <div>
+            <label for="nombre">Nombre d'extraits</label>
+            <input type="number" id="nombre" min="1" max="200" step="1">
+          </div>
+          <div id="blocNom" hidden style="flex:1;min-width:180px">
+            <label for="nom">Nom de la vidéo</label>
+            <input type="text" id="nom" maxlength="80" placeholder="blindtest">
+          </div>
+        </div>
+
+        <details class="avance">
+          <summary>Options avancées</summary>
+          <div class="champ" id="blocDebut">
+            <label for="debut">Départ dans l'extrait (secondes)</label>
+            <input type="number" id="debut" min="0" step="0.5" value="0">
+            <div class="aide" id="aideDebut"></div>
+          </div>
+          <div class="champ">
+            <label for="oeuvre">Afficher le film / la série / le spectacle dans les réponses</label>
+            <select id="oeuvre">
+              <option value="auto">Automatique selon le thème</option>
+              <option value="oui">Oui</option>
+              <option value="non">Non</option>
+            </select>
+          </div>
+          <div class="champ" id="blocMelanger">
+            <label class="case"><input type="checkbox" id="melanger"> <span>Mélanger l'ordre des titres de la playlist / de la liste</span></label>
+          </div>
+          <div class="champ">
+            <label class="case"><input type="checkbox" id="essai"> <span>Mode essai : dossier à part, n'entre pas dans l'historique et ne remplace pas le blind test actuel</span></label>
+          </div>
+        </details>
+
+        <div class="ligne">
+          <button class="bouton large" id="voirApercu" type="submit" style="flex:2 1 220px">Voir la sélection</button>
+          <button class="bouton discret" id="fabriquer" type="button" style="flex:1 1 160px">Fabriquer directement</button>
+        </div>
+        <div class="erreurForm" id="erreurForm" role="alert"></div>
+        <div class="aide">« Voir la sélection » montre les titres retenus (à écouter, à retirer) avant de fabriquer : quelques secondes, jusqu'à 2 min la première fois pour un thème en langue étrangère. La fabrication prend ensuite 1 à 4 minutes, plus 5 à 10 minutes si la vidéo est montée. Vous pouvez fermer cet onglet : tout continue tant que la fenêtre noire reste ouverte.</div>
+      </form>
+    </section>
+
+    <div>
+      <!-- 2. fabrication en cours -->
+      <section class="carte" aria-labelledby="tFab">
+        <h2 id="tFab">Fabrication</h2>
+        <div id="fab"><p class="vide">Rien en cours.</p></div>
+      </section>
+
+      <!-- 3. partie -->
+      <section class="carte" aria-labelledby="tPartie">
+        <h2 id="tPartie">Partie</h2>
+        <div id="partie"></div>
+      </section>
+    </div>
+  </div>
+
+  <!-- aperçu de la sélection -->
+  <section class="carte" id="secApercu" hidden aria-labelledby="tApercu" style="margin-top:16px">
+    <div class="ligne" style="justify-content:space-between;margin-bottom:10px">
+      <h2 id="tApercu" style="margin:0">Sélection proposée</h2>
+      <button class="bouton discret petit" id="fermerApercu" type="button">Fermer</button>
+    </div>
+    <div id="apercu"></div>
+  </section>
+  <audio id="sonApercu" preload="none"></audio>
+
+  <!-- 4. les blind tests déjà faits -->
+  <section class="carte" aria-labelledby="tLots" style="margin-top:16px">
+    <h2 id="tLots">Mes blind tests</h2>
+    <div id="lots"><p class="vide">Chargement…</p></div>
+  </section>
+</main>
+
+<dialog id="dJouer">
+  <form method="dialog" id="formJouer">
+    <h3>Lancer une partie</h3>
+    <p id="jouerNom" style="margin:0 0 12px;font-weight:700"></p>
+    <div class="alerte" id="jouerRemplace" hidden></div>
+    <div class="choixConnexion">
+      <label><input type="radio" name="connexion" value="wifi" checked>
+        <span>Wi-Fi de la maison<small>Les téléphones doivent être sur le même Wi-Fi que ce PC.</small></span></label>
+      <label id="choixInternet"><input type="radio" name="connexion" value="internet">
+        <span>Internet (4G ou autre Wi-Fi)<small id="aideInternet">Ouvre un accès Internet temporaire (jusqu'à 1 min de préparation).</small></span></label>
+    </div>
+    <div id="blocMode">
+      <div class="champ" style="margin:10px 0 8px"><span class="titre">Mode de jeu</span>
+        <div class="choixConnexion" id="modes"></div></div>
+      <div class="champ ligne" style="margin-bottom:8px"><label for="equipesJeu" style="margin:0">Équipes</label>
+        <select id="equipesJeu" style="width:auto"><option value="0">Chacun pour soi</option><option value="2">2 équipes</option>
+          <option value="3">3 équipes</option><option value="4">4 équipes</option></select>
+        <span class="petitgris">Score d'équipe = moyenne de ses joueurs ; chacun choisit son équipe sur son téléphone.</span></div>
+    </div>
+    <label class="case" style="margin:6px 0 16px"><input type="checkbox" id="nouveauxChoix">
+      <span>Refaire les 4 propositions de chaque question (1 à 3 min)</span></label>
+    <div class="actions" style="justify-content:flex-end">
+      <button class="bouton discret" value="annuler" type="submit">Annuler</button>
+      <button class="bouton" value="ok" type="submit" id="jouerOk">Préparer la partie</button>
+    </div>
+  </form>
+</dialog>
+
+<dialog id="dEditeur" class="editeur">
+  <div class="ligne" style="justify-content:space-between;align-items:flex-end">
+    <div style="flex:1;min-width:220px">
+      <label for="edNom" class="petitgris">Nom du blind test (affiché dans l'atelier)</label>
+      <input type="text" id="edNom" maxlength="80">
+    </div>
+    <button class="bouton discret petit" id="edFermer" type="button">Fermer</button>
+  </div>
+  <div id="edInfo" style="margin-top:10px"></div>
+  <div id="edListe"></div>
+  <div class="barreActions" style="margin-left:-18px;margin-right:-18px;padding:12px 18px 14px">
+    <button class="bouton" id="edEnregistrer" type="button">Enregistrer</button>
+    <button class="bouton discret" id="edVideo" type="button" hidden></button>
+    <span class="petitgris" id="edEtat"></span>
+  </div>
+  <audio id="edSon" preload="none"></audio>
+</dialog>
+
+<dialog id="dTexte" class="large">
+  <h3 id="texteTitre"></h3>
+  <pre id="texteContenu"></pre>
+  <form method="dialog" class="actions" style="justify-content:flex-end"><button class="bouton discret">Fermer</button></form>
+</dialog>
+
+<script>
+const cle = new URLSearchParams(location.search).get("cle");
+const $ = (id) => document.getElementById(id);
+// échappe aussi les guillemets : les valeurs vont dans des attributs (value="...", data-...)
+const esc = (t) => { const d = document.createElement("div"); d.textContent = t ?? ""; return d.innerHTML.replace(/"/g, "&quot;").replace(/'/g, "&#39;"); };
+const url = (chemin, params = {}) => `${chemin}?${new URLSearchParams({ cle, ...params })}`;
+
+let E = null;                          // dernier état reçu du serveur
+let duree = null, usage = null, nombreManuel = false, dernierLots = "", dernierePartie = "", lotAJouer = null;
+
+async function poster(chemin, corps) {
+  const r = await fetch(url(chemin), { method: "POST", headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(corps || {}) });
+  const d = await r.json().catch(() => ({}));
+  if (!r.ok) throw new Error(d.erreur || "Action impossible.");
+  return d;
+}
+
+// ---------- formulaire ----------
+function nombreParDefaut(d) {
+  return E.formats.slice().sort((a, b) => Math.abs(a.duree - d) - Math.abs(b.duree - d) || a.duree - b.duree)[0].nombre;
+}
+const musiqueContinue = (d) => d <= E.preview - E.duree_reponse;
+const debutMaxi = (d) => Math.max(0, E.preview - d - (musiqueContinue(d) ? E.duree_reponse : 0));
+
+function initForm() {
+  const puces = E.formats.map((f) => `<button type="button" data-d="${f.duree}">${f.duree} s</button>`).join("")
+    + `<button type="button" data-d="autre">Autre</button>`;
+  $("durees").innerHTML = puces;
+  for (const b of $("durees").querySelectorAll("button")) b.onclick = () => {
+    if (b.dataset.d === "autre") { $("ligneAutre").hidden = false; $("dureeLibre").focus();
+      choisirDuree(+$("dureeLibre").value || null, "autre"); }
+    else { $("ligneAutre").hidden = true; choisirDuree(+b.dataset.d, b.dataset.d); }
+  };
+  $("dureeLibre").min = E.duree_min; $("dureeLibre").max = E.duree_max;
+  $("dureeLibre").oninput = () => choisirDuree(+$("dureeLibre").value || null, "autre");
+  choisirDuree(E.formats[0].duree, String(E.formats[0].duree));
+}
+function choisirDuree(d, puce) {
+  for (const b of $("durees").querySelectorAll("button")) b.setAttribute("aria-pressed", b.dataset.d === puce);
+  duree = d && d >= E.duree_min && d <= E.duree_max ? Math.round(d) : null;
+  if (!duree) { $("aideDuree").textContent = `Entre ${E.duree_min} et ${E.duree_max} secondes (les extraits Deezer durent 30 s).`; return; }
+  $("aideDuree").textContent = musiqueContinue(duree)
+    ? `Pendant la réponse, la musique continue jusqu'au bout de l'extrait (${E.preview - duree} s).`
+    : `Réponse affichée ${E.duree_reponse} s, sans musique (il ne reste plus d'extrait).`;
+  if (!nombreManuel) $("nombre").value = nombreParDefaut(duree);
+  const maxi = debutMaxi(duree);
+  $("blocDebut").hidden = maxi === 0;
+  $("debut").max = maxi;
+  if (+$("debut").value > maxi) $("debut").value = maxi;
+  $("aideDebut").textContent = `De 0 à ${String(maxi).replace(".", ",")} s : utile pour éviter les intros calmes.`;
+}
+$("nombre").oninput = () => { nombreManuel = $("nombre").value !== ""; };
+
+function detecter(t) {
+  const lignes = t.split(/\r?\n/).map((l) => l.trim()).filter((l) => l && !l.startsWith("#"));
+  const x = t.trim(), b = x.toLowerCase();
+  if (lignes.length > 1 || (lignes.length === 1 && x.includes(" - ") && !/^(https?:\/\/|www\.)/.test(b)))
+    return { type: "lignes", texte: lignes.length > 1 ? `Liste de ${lignes.length} titres (format « Artiste - Titre »)` : "Un seul titre (« Artiste - Titre ») : ajoutez-en un par ligne" };
+  if (!x) return null;
+  if (b.includes("spotify")) return { type: "spotify", texte: "Playlist Spotify : les titres seront retrouvés sur Deezer" };
+  if (b.includes("deezer") || /^\d{5,}$/.test(x)) return { type: "playlist", texte: "Playlist Deezer" };
+  if (/^(https?:\/\/|www\.)/.test(b)) return { type: "erreur", texte: "Lien non reconnu : seuls les liens de playlist Deezer ou Spotify sont acceptés." };
+  return { type: "theme", texte: `Thème « ${x} » : playlists Deezer cherchées automatiquement` };
+}
+function majSource() {
+  const d = detecter($("source").value);
+  $("detecte").textContent = d ? d.texte : "";
+  $("detecte").className = "detecte" + (d && d.type === "erreur" ? " erreur" : "");
+  $("blocMelanger").hidden = !(d && (d.type === "spotify" || d.type === "lignes" || d.type === "playlist"));
+  const s = $("source"); s.style.height = "auto"; s.style.height = Math.min(320, s.scrollHeight + 2) + "px";
+}
+$("source").oninput = majSource;
+
+for (const b of $("usages").querySelectorAll("button")) b.onclick = () => {
+  usage = b.dataset.usage;
+  for (const x of $("usages").querySelectorAll("button")) x.setAttribute("aria-pressed", x === b);
+  $("blocNom").hidden = usage === "quiz";
+  $("erreurForm").textContent = "";
+};
+
+const errForm = (m) => { $("erreurForm").textContent = m; };
+function valeursForm(avecUsage) {
+  const d = detecter($("source").value);
+  if (!duree) throw new Error(`Choisissez un temps pour deviner (${E.duree_min} à ${E.duree_max} s).`);
+  if (!d) { $("source").focus(); throw new Error("Indiquez un thème, un lien de playlist ou une liste de titres."); }
+  if (d.type === "erreur") throw new Error(d.texte);
+  if (avecUsage && !usage) throw new Error("Indiquez si c'est pour le quiz, pour la vidéo, ou les deux.");
+  const nombre = +$("nombre").value;
+  if (!(nombre >= 1 && nombre <= 200)) throw new Error("Le nombre d'extraits doit être compris entre 1 et 200.");
+  return { duree, nombre, source: $("source").value, usage, nom: $("nom").value,
+    debut: $("blocDebut").hidden ? 0 : +$("debut").value || 0, oeuvre: $("oeuvre").value,
+    melanger: !$("blocMelanger").hidden && $("melanger").checked, essai: $("essai").checked };
+}
+async function envoyer(chemin, corps) {
+  errForm("");
+  try {
+    await poster(chemin, corps);
+    $("tFab").scrollIntoView({ behavior: "smooth", block: "start" });
+  } catch (e) { errForm(e.message); }
+  rendreBoutons();
+}
+$("form").onsubmit = (ev) => {                       // « Voir la sélection »
+  ev.preventDefault();
+  let v; try { v = valeursForm(false); } catch (e) { return errForm(e.message); }
+  envoyer("/atelier/apercu", v);
+};
+$("fabriquer").onclick = () => {
+  let v; try { v = valeursForm(true); } catch (e) { return errForm(e.message); }
+  envoyer("/atelier/fabriquer", v);
+};
+
+// ---------- fabrication ----------
+const ETAPES = [
+  [/^Recherche de playlists|^Lecture de la playlist|^Recherche de \d+ titres/, "Recherche des titres"],
+  [/^Téléchargement et découpe/, "Téléchargement et découpe des extraits"],
+  [/^Recherche des œuvres/, "Recherche des œuvres (film, spectacle…)"],
+  [/^Montage de la vidéo/, "Montage de la vidéo YouTube"],
+  [/^Préparation des 4 propositions/, "Préparation du quiz (4 propositions par question)"],
+  [/^Vérification de la langue/, "Vérification de la langue des artistes (MusicBrainz)"],
+  [/^Mise à jour du quiz/, "Mise à jour du quiz"],
+  [/^Téléchargement et découpe de « /, "Nouvel extrait"],
+  [/^Ouverture de l'accès Internet/, "Ouverture de l'accès Internet"],
+  [/^Pochettes des albums/, "Pochettes des albums"],
+  [/^Années de sortie/, "Années de sortie (MusicBrainz)"],
+  [/^Pays des artistes/, "Pays des artistes (MusicBrainz)"],
+];
+function progression(journal) {
+  let etape = "Démarrage…", frac = null;
+  for (const brut of journal) {
+    const l = brut.trim();
+    for (const [re, nom] of ETAPES) if (re.test(l)) { etape = nom; frac = null; }
+    let m = l.match(/^\[(\d+)\/(\d+)\] OK/) || l.match(/^(\d+)\/(\d+) séquences prêtes/);
+    if (m) frac = +m[1] / +m[2];
+  }
+  return { etape, frac };
+}
+const duree_txt = (s) => { s = Math.max(0, Math.round(s)); return s < 60 ? `${s} s` : `${Math.floor(s / 60)} min ${String(s % 60).padStart(2, "0")}`; };
+
+function rendreFabrication() {
+  const t = E.tache, el = $("fab");
+  if (!t) { el.innerHTML = `<p class="vide">Rien en cours.</p>`; return; }
+  const journalOuvert = el.querySelector("details.jdetails")?.open;
+  const pre = el.querySelector("pre.journal");
+  const enBas = !pre || pre.scrollTop + pre.clientHeight >= pre.scrollHeight - 20;
+  const { etape, frac } = progression(t.journal);
+  let h = `<div class="tacheTitre">${esc(t.nom)}</div>`;
+  if (t.etat === "en_cours") {
+    h += `<div class="etape"><span>${esc(etape)}</span><span id="chrono"></span></div>
+      <div class="barre${frac === null ? " indet" : ""}"><div style="width:${frac === null ? "" : Math.round(frac * 100) + "%"}"></div></div>
+      <div class="actions"><button class="bouton danger petit" id="annuler" type="button">Annuler</button></div>`;
+  } else if (t.etat === "termine") {
+    h += bilan(t);
+  } else {
+    h += `<div class="bilan ko"><b>${t.etat === "annule" ? "Annulé" : "Échec"}</b><div>${esc(t.erreur)}</div></div>`;
+  }
+  h += `<details class="jdetails"${journalOuvert || t.etat === "erreur" ? " open" : ""}><summary>Journal détaillé</summary>
+    <pre class="journal">${esc(t.journal.join("\n"))}</pre></details>`;
+  el.innerHTML = h;
+  const p2 = el.querySelector("pre.journal");
+  if (enBas) p2.scrollTop = p2.scrollHeight;
+  if ($("annuler")) $("annuler").onclick = async () => {
+    if (!confirm("Arrêter la fabrication ? Les anciens fichiers ne seront pas modifiés.")) return;
+    $("annuler").disabled = true; $("annuler").textContent = "Arrêt en cours…";
+    await poster("/atelier/annuler").catch(() => {});
+  };
+  for (const b of el.querySelectorAll("[data-action]")) brancher(b);
+  majChrono();
+  const fin = t.etat === "termine" ? `${t.debut}` : null;
+  if (fin && fin !== tacheVue) {
+    tacheVue = fin;
+    const r = t.resultat || {};
+    if (r.apercu) chargerApercu(r.apercu);
+    // rechargé seulement s'il n'y a pas de corrections en cours de saisie (elles seraient perdues)
+    if (editeur.lot && (r.remplace || /^Mise à jour du quiz/.test(t.nom)) && $("dEditeur").open
+        && !lignesModifiees().length) chargerEditeur(editeur.lot, true);
+  }
+}
+let tacheVue = null;
+function bilan(t) {
+  const r = t.resultat || {};
+  if (r.apercu) {
+    return `<div class="bilan ok"><b>Sélection prête : ${Math.min(r.trouves, r.nombre)} titres</b>${r.trouves < r.nombre ? ` <span style="color:#ffd77a">(sur ${r.nombre} demandés)</span>` : ""}
+      <div>Écoutez, retirez ce qui ne va pas, puis fabriquez.</div>
+      <div class="actions"><button class="bouton" data-action="apercu" data-id="${esc(r.apercu)}">Voir la sélection</button></div></div>`;
+  }
+  if (r.remplace) {
+    return `<div class="bilan ok"><b>Question ${String(r.remplace).padStart(2, "0")} remplacée</b><div>${esc(r.texte)}</div>
+      <div class="actions"><button class="bouton discret petit" data-action="editer" data-lot="${esc(r.lot)}">Revenir aux réponses</button></div></div>`;
+  }
+  if (r.video && r.nombre === undefined) {
+    return `<div class="bilan ok"><b>Vidéo prête</b><div>${esc(r.video)}</div>
+      <div class="actions"><button class="bouton discret petit" data-action="dossier" data-lot="${esc(r.lot)}">Ouvrir le dossier</button></div></div>`;
+  }
+  if (r.lot && r.nombre === undefined && !r.url_ecran) {   // essai gardé
+    return `<div class="bilan ok"><b>C'est maintenant le blind test officiel</b>${r.archive ? `<div class="aide">L'ancien est rangé dans les archives (« ${esc(r.archive)} »).</div>` : ""}</div>`;
+  }
+  if (!r.url_ecran && r.nombre === undefined) return `<div class="bilan ok"><b>Terminé</b></div>`;
+  if (r.url_ecran) {                                   // partie préparée
+    return `<div class="bilan ok"><b>Partie prête !</b><div>Ouvrez l'écran de jeu (sur la TV ou en plein écran avec F11), puis faites scanner le QR code.</div>
+      <div class="actions"><a class="bouton" href="${esc(r.url_ecran)}" target="_blank" rel="noopener">Ouvrir l'écran de jeu</a></div></div>`;
+  }
+  const lot = E.lots.find((l) => l.id === r.lot);
+  let h = `<div class="bilan ok"><b>${r.nombre} extraits prêts</b>${r.nombre < r.demandes ? ` <span style="color:#ffd77a">(sur ${r.demandes} demandés : pas assez de titres disponibles)</span>` : ""}`;
+  h += `<div>Durée : ${duree_txt((t.fin || 0) - t.debut)}${r.video ? ` · vidéo : ${esc(r.video)}` : ""}${r.quiz ? " · quiz prêt" : ""}</div>`;
+  if (r.archive) h += `<div class="aide">L'ancien blind test a été rangé dans les archives (« ${esc(r.archive)} »).</div>`;
+  if (r.a_verifier) h += `<div style="color:#ffd77a">${r.a_verifier} question(s) du quiz à vérifier.</div>`;
+  if (r.notes) h += `<div style="color:#ffd77a">${r.notes} remarque(s) dans les problèmes signalés.</div>`;
+  h += `</div><div class="actions">`;
+  if (r.quiz && lot) h += `<button class="bouton" data-action="jouer" data-lot="${esc(r.lot)}">Jouer maintenant</button>`;
+  if (lot) h += boutonsFichiers(lot);
+  return h + `</div>`;
+}
+function majChrono() {
+  const c = $("chrono");
+  if (c && E.tache && E.tache.etat === "en_cours") c.textContent = duree_txt(Date.now() / 1000 - E.tache.debut);
+}
+setInterval(majChrono, 1000);
+
+// ---------- partie ----------
+const PHASES = { attente: "salle d'attente", question: "question", resultats: "réponse affichée", fin: "terminée" };
+function rendrePartie() {
+  const p = E.partie;
+  const cle2 = JSON.stringify([p, E.internet, E.url_joueur, E.alerte, E.reprise, E.lots.map((l) => [l.id, l.nom])]);
+  if (cle2 === dernierePartie) return;
+  dernierePartie = cle2;
+  let h = E.alerte ? `<div class="alerte">${esc(E.alerte)}</div>` : "";
+  const rp = E.reprise;
+  if (rp) {                                            // la fenêtre s'est fermée en pleine partie
+    const tete = rp.tete.map((j) => `${esc(j.pseudo)} ${j.score.toLocaleString("fr-FR")}`).join(" · ");
+    h += `<div class="alerte"><div>Partie interrompue${rp.date ? ` (${esc(rp.date)})` : ""} : <b>${esc(rp.nom)}</b>,
+      reprise possible à la question ${rp.suite + 1} / ${rp.total}, ${rp.joueurs} joueur${rp.joueurs > 1 ? "s" : ""}, scores conservés (mode ${esc(rp.mode)}${rp.equipes ? `, ${rp.equipes} équipes` : ""}).</div>
+      ${tete ? `<div class="aide" style="color:inherit">En tête : ${tete}</div>` : ""}
+      <div class="actions"><button class="bouton petit" id="reprendre" type="button">Reprendre la partie</button>
+      <button class="bouton discret petit" id="oublier" type="button">Oublier</button></div></div>`;
+  }
+  if (!p) {
+    h += `<p class="vide">Aucune partie lancée. Choisissez un blind test ci-dessous, bouton « Jouer ».</p>`;
+  } else {
+    const lot = E.lots.find((l) => l.id === p.lot);
+    const ou = p.phase === "question" || p.phase === "resultats" ? ` ${p.numero} / ${p.total}` : "";
+    h += `<dl class="partieInfo">
+      <dt>Blind test</dt><dd>${esc(lot ? lot.nom : p.lot)}</dd>
+      <dt>État</dt><dd>${esc(PHASES[p.phase] || p.phase)}${ou} · ${p.joueurs} joueur${p.joueurs > 1 ? "s" : ""}</dd>
+      <dt>Mode</dt><dd>${esc(p.mode)}${p.equipes ? ` · ${p.equipes} équipes` : ""}</dd>
+      <dt>Connexion</dt><dd>${E.internet ? "Internet" : "Wi-Fi de la maison"}</dd>
+      <dt>Adresse</dt><dd>${esc(E.url_joueur)} · code ${esc(E.code)}</dd></dl>
+      <div class="actions"><a class="bouton" href="${esc(E.url_ecran)}" target="_blank" rel="noopener">Ouvrir l'écran de jeu</a></div>`;
+  }
+  $("partie").innerHTML = h;
+  if ($("reprendre")) {
+    $("reprendre").onclick = () => ouvrirJouer(rp.lot, true);
+    $("oublier").onclick = () => { if (confirm("Oublier cette partie ? Les scores seront perdus."))
+      poster("/atelier/oublier").catch((e) => alert(e.message)); };
+  }
+}
+
+// ---------- lots ----------
+function boutonsFichiers(l) {
+  let h = `<button class="bouton discret petit" data-action="editer" data-lot="${esc(l.id)}">Réponses</button>`;
+  if (l.a_verifier) h += `<button class="bouton discret petit" data-action="voir" data-lot="${esc(l.id)}" data-nom="propositions_a_verifier.txt">À vérifier (${l.a_verifier})</button>`;
+  if (l.problemes) h += `<button class="bouton discret petit" data-action="voir" data-lot="${esc(l.id)}" data-nom="problemes.txt">Problèmes signalés</button>`;
+  h += `<button class="bouton discret petit" data-action="dossier" data-lot="${esc(l.id)}">Dossier</button>`;
+  if (l.categorie === "essai") h += `<button class="bouton discret petit" data-action="garder" data-lot="${esc(l.id)}" title="Remplace le blind test actuel de ${l.duree} s (archivé)">Garder cet essai</button>`;
+  if (l.categorie !== "actuel") h += `<button class="bouton danger petit" data-action="supprimer" data-lot="${esc(l.id)}">Supprimer</button>`;
+  return h;
+}
+function ligneLot(l) {
+  const enJeu = E.partie && E.partie.lot === l.id;
+  const badges = [
+    l.quiz ? `<span class="badge vert">Quiz prêt</span>` : `<span class="badge gris">Quiz à préparer</span>`,
+    l.video ? `<span class="badge cyan">Vidéo</span>` : "",
+    l.video_perimee ? `<span class="badge jaune">Vidéo à refaire</span>` : "",
+    l.a_verifier ? `<span class="badge jaune">${l.a_verifier} à vérifier</span>` : "",
+    enJeu ? `<span class="badge cyan">En jeu</span>` : "",
+  ].join("");
+  return `<li class="lot"><div><div class="nom">${esc(l.nom)}</div>
+    <div class="meta">${l.nombre} extraits de ${l.duree} s${l.date ? " · " + esc(l.date) : ""} · ${esc(l.dossier)}${l.video ? ` · vidéo « ${esc(l.video.replace(/\.mp4$/i, ""))} »` : ""}</div>
+    <div class="badges">${badges}</div></div>
+    <div class="actions" style="margin-top:0"><button class="bouton petit" data-action="jouer" data-lot="${esc(l.id)}">Jouer</button>${boutonsFichiers(l)}</div></li>`;
+}
+function rendreLots() {
+  const cle2 = JSON.stringify([E.lots, E.partie && E.partie.lot]);
+  if (cle2 === dernierLots) return;
+  dernierLots = cle2;
+  const groupes = [["actuel", "Actuels"], ["essai", "Essais"], ["archive", "Archives"]];
+  let h = "";
+  for (const [cat, titre] of groupes) {
+    const ls = E.lots.filter((l) => l.categorie === cat);
+    if (!ls.length) continue;
+    const liste = `<ul class="lots">${ls.map(ligneLot).join("")}</ul>`;
+    h += cat === "archive"
+      ? `<details class="archives"><summary class="groupe">${titre} (${ls.length})</summary>${liste}</details>`
+      : `<div class="groupe">${titre}</div>${liste}`;
+  }
+  const ouvert = $("lots").querySelector("details.archives")?.open;
+  $("lots").innerHTML = h || `<p class="vide">Aucun blind test pour l'instant : fabriquez le premier ci-dessus.</p>`;
+  if (ouvert) $("lots").querySelector("details.archives").open = true;
+  for (const b of $("lots").querySelectorAll("[data-action]")) brancher(b);
+}
+
+function brancher(b) {
+  const lot = b.dataset.lot;
+  if (b.dataset.action === "jouer") b.onclick = () => ouvrirJouer(lot);
+  else if (b.dataset.action === "editer") b.onclick = () => chargerEditeur(lot);
+  else if (b.dataset.action === "apercu") b.onclick = () => chargerApercu(b.dataset.id);
+  else if (b.dataset.action === "garder") b.onclick = () => {
+    const l = E.lots.find((x) => x.id === lot) || {};
+    if (confirm(`Garder « ${l.nom} » comme blind test officiel de ${l.duree} s ? L'actuel sera rangé dans les archives, et ses titres entreront dans l'historique.`))
+      poster("/atelier/lot/garder", { lot }).catch((e) => alert(e.message));
+  };
+  else if (b.dataset.action === "supprimer") b.onclick = () => {
+    const l = E.lots.find((x) => x.id === lot) || {};
+    if (confirm(`Mettre « ${l.nom} » à la corbeille ? (récupérable depuis la corbeille de Windows)`))
+      poster("/atelier/lot/supprimer", { lot }).catch((e) => alert(e.message));
+  };
+  else if (b.dataset.action === "dossier") b.onclick = () => poster("/atelier/ouvrir", { lot }).catch((e) => alert(e.message));
+  else if (b.dataset.action === "voir") b.onclick = async () => {
+    const r = await fetch(url("/atelier/fichier", { lot, nom: b.dataset.nom }));
+    $("texteTitre").textContent = `${b.textContent} — ${(E.lots.find((l) => l.id === lot) || {}).nom || lot}`;
+    $("texteContenu").textContent = r.ok ? await r.text() : "Fichier introuvable.";
+    $("dTexte").showModal();
+  };
+}
+
+let repriseAJouer = false;
+function ouvrirJouer(lot, reprise = false) {
+  const l = E.lots.find((x) => x.id === lot);
+  if (!l) return;
+  lotAJouer = lot; repriseAJouer = reprise;
+  $("dJouer").querySelector("h3").textContent = reprise ? "Reprendre la partie interrompue" : "Lancer une partie";
+  $("jouerNom").textContent = reprise
+    ? `${l.nom} — reprise à la question ${E.reprise.suite + 1} / ${l.nombre}, scores conservés. Les téléphones se reconnectent seuls (en Wi-Fi ; par Internet, il faudra rescanner le QR code).`
+    : `${l.nom} — ${l.nombre} questions de ${l.duree} s`;
+  $("nouveauxChoix").closest("label").hidden = reprise;
+  $("blocMode").hidden = reprise;                    // une partie reprise garde son mode et ses équipes
+  if (!$("modes").children.length) $("modes").innerHTML = E.modes.map((m, i) => `<label><input type="radio" name="mode" value="${esc(m.id)}" ${i ? "" : "checked"}>
+    <span>${esc(m.nom)}<small>${esc(m.aide)}</small></span></label>`).join("");
+  const p = E.partie, avertir = [];
+  if (p && (p.phase === "question" || p.phase === "resultats"))
+    avertir.push(`Une partie est en cours (question ${p.numero} / ${p.total}) : elle sera remplacée. `
+      + "Les joueurs inscrits restent connectés, leurs scores repartent à zéro.");
+  if (E.reprise && !reprise) avertir.push("La partie interrompue ne pourra plus être reprise.");
+  $("jouerRemplace").hidden = !avertir.length;
+  $("jouerRemplace").textContent = avertir.join(" ");
+  const radioInternet = $("choixInternet").querySelector("input");
+  radioInternet.disabled = !E.cloudflared;
+  $("aideInternet").textContent = !E.cloudflared
+    ? "Indisponible : connectez Tailscale (ou installez cloudflared)."
+    : E.adresse_fixe
+      ? `Adresse fixe ${E.adresse_fixe.replace(/^https:\/\/|\/$/g, "")} : la même adresse à chaque soirée.`
+      : (E.internet ? "Accès Internet déjà ouvert : rien à rescanner." : "Ouvre un accès Internet temporaire (jusqu'à 1 min de préparation).");
+  document.querySelector(`#formJouer input[value="${E.internet ? "internet" : "wifi"}"]`).checked = true;
+  $("nouveauxChoix").checked = false;
+  $("jouerOk").textContent = reprise ? "Reprendre" : l.quiz ? "Lancer la partie" : "Préparer le quiz et lancer";
+  $("dJouer").showModal();
+}
+$("dJouer").addEventListener("close", async () => {
+  if ($("dJouer").returnValue !== "ok" || !lotAJouer) return;
+  const internet = document.querySelector('#formJouer input[name="connexion"]:checked').value === "internet";
+  try {
+    const mode = (document.querySelector('#modes input[name="mode"]:checked') || {}).value || "classique";
+    const d = await poster("/atelier/jouer", { lot: lotAJouer, internet, reprise: repriseAJouer, mode, equipes: +$("equipesJeu").value,
+      nouveaux_choix: !repriseAJouer && $("nouveauxChoix").checked });
+    $(d.tache ? "tFab" : "tPartie").scrollIntoView({ behavior: "smooth", block: "start" });
+  } catch (e) { alert(e.message); }
+});
+
+$("quitter").onclick = async () => {
+  const enCours = E && E.tache && E.tache.etat === "en_cours";
+  if (!confirm("Arrêter le blind test ?" + (enCours ? " La fabrication en cours sera interrompue." : "")
+    + (E && E.partie ? " La partie s'arrête aussi." : ""))) return;
+  await poster("/atelier/quitter").catch(() => {});
+  arrete = true;
+  document.body.innerHTML = `<main><h1 style="margin-top:20vh;text-align:center">Blind test arrêté</h1>
+    <p style="text-align:center;color:#a9b3d9">Vous pouvez fermer cet onglet. Pour revenir : double-clic sur « Blind test ».</p></main>`;
+};
+
+// ---------- mises à jour (attente longue : le serveur répond dès qu'il y a du nouveau) ----------
+function rendreBoutons() {
+  const occupe = E && E.tache && E.tache.etat === "en_cours";
+  $("fabriquer").disabled = $("voirApercu").disabled = occupe;
+  $("voirApercu").textContent = occupe ? "Fabrication en cours…" : "Voir la sélection";
+  if ($("apFabriquer")) $("apFabriquer").disabled = occupe;
+}
+
+// ---------- lecture des extraits (un seul à la fois) ----------
+function lire(audio, bouton, src) {
+  const deja = bouton.classList.contains("joue");
+  document.querySelectorAll(".lecture.joue").forEach((b) => { b.classList.remove("joue"); b.textContent = "▶"; });
+  audio.pause();
+  if (deja || !src) return;
+  audio.src = src; audio.currentTime = 0;
+  audio.play().then(() => { bouton.classList.add("joue"); bouton.textContent = "■"; })
+    .catch(() => { bouton.textContent = "✕"; bouton.title = "Extrait indisponible"; });
+  audio.onended = () => { bouton.classList.remove("joue"); bouton.textContent = "▶"; };
+}
+
+// ---------- aperçu de la sélection ----------
+let AP = null, apRetires = new Set(), apPlaylistsOff = new Set();
+async function chargerApercu(id) {
+  const r = await fetch(url("/atelier/apercu", { id }));
+  const d = await r.json();
+  if (!r.ok) return alert(d.erreur || "Aperçu introuvable.");
+  AP = d; apRetires = new Set(); apPlaylistsOff = new Set();
+  $("secApercu").hidden = false;
+  rendreApercu();
+  $("secApercu").scrollIntoView({ behavior: "smooth", block: "start" });
+}
+function rendreApercu() {
+  const d = AP.details, gardes = AP.titres.filter((t) => !apRetires.has(t.cle));
+  const retenus = Math.min(gardes.length, AP.nombre), remplacants = Math.max(0, gardes.length - AP.nombre);
+  let h = `<div class="apResume"><b>${retenus} titres retenus</b><span class="petitgris">sur ${AP.nombre} demandés · ${remplacants} remplaçant${remplacants > 1 ? "s" : ""} (utilisés si un extrait est indisponible)</span></div>
+    <div class="petitgris">${esc(AP.source)}</div>`;
+  if (retenus < AP.nombre) h += `<div class="alerte" style="margin-top:10px">Pas assez de titres pour ${AP.nombre} extraits : le blind test en aura ${retenus}${d && d.langues.length ? " (on ne complète jamais avec une autre langue)" : ""}.</div>`;
+  if (d && d.langues.length) h += `<div class="aide">Thème en ${esc(d.langues.join(", "))} : ${d.hors_theme.length} titre${d.hors_theme.length > 1 ? "s" : ""} dans une autre langue écarté${d.hors_theme.length > 1 ? "s" : ""}, ${d.ecartees.length} playlist${d.ecartees.length > 1 ? "s" : ""} hors sujet ignorée${d.ecartees.length > 1 ? "s" : ""}.</div>`;
+  if (d && d.playlists.length) {
+    h += `<details class="apBloc" open><summary>Playlists utilisées (${d.playlists.length}) — décochez celles qui ne collent pas au thème</summary><ul class="listePl">`
+      + d.playlists.map((pl) => `<li><label class="case"><input type="checkbox" data-pl="${esc(String(pl.id))}" ${apPlaylistsOff.has(String(pl.id)) ? "" : "checked"}>
+        <span>${esc(pl.titre)} <small>${pl.editoriale ? "Deezer" : esc(pl.auteur)} · ${pl.titres} titres</small></span></label></li>`).join("")
+      + `</ul><button class="bouton discret petit" id="apRecalculer" type="button" ${apPlaylistsOff.size ? "" : "hidden"}>Refaire la sélection sans les playlists décochées</button></details>`;
+  }
+  h += `<div class="apBloc"><div class="titre">Titres (décochez pour retirer)</div><ul class="pistes">`;
+  let rang = 0;
+  for (const t of AP.titres) {
+    const retire = apRetires.has(t.cle);
+    if (!retire) rang += 1;
+    if (!retire && rang === AP.nombre + 1) h += `<li class="separateur">Remplaçants</li>`;
+    h += `<li class="${retire ? "retire" : rang > AP.nombre ? "remplacant" : ""}">
+      <input type="checkbox" data-cle="${esc(t.cle)}" ${retire ? "" : "checked"} aria-label="Garder ${esc(t.artiste)} - ${esc(t.titre)}">
+      <span class="num">${retire ? "" : rang}</span>
+      <button class="lecture" type="button" data-src="${t.id ? esc(url("/atelier/ecoute", { id: t.id })) : ""}" title="Écouter (extrait Deezer)" ${t.id ? "" : "disabled"}>▶</button>
+      <span class="txt">${esc(t.artiste)} — ${esc(t.titre)}${t.note ? ` <small class="petitgris">(${esc(t.note)})</small>` : ""}</span></li>`;
+  }
+  h += `</ul></div>`;
+  if (d && d.hors_theme.length) h += `<details class="apBloc"><summary>Titres écartés car hors de la langue du thème (${d.hors_theme.length})</summary><ul class="listePl">`
+    + d.hors_theme.map((x) => `<li>${esc(x.artiste)} — ${esc(x.titre)} <small>${esc(x.raison)}</small></li>`).join("") + `</ul></details>`;
+  if (d && d.ecartees.length) h += `<details class="apBloc"><summary>Playlists ignorées (${d.ecartees.length})</summary><ul class="listePl">`
+    + d.ecartees.map((x) => `<li>${esc(x.titre)} <small>${esc(x.raison)}</small></li>`).join("") + `</ul></details>`;
+  if (AP.notes.length) h += `<details class="apBloc"><summary>Remarques (${AP.notes.length})</summary><ul class="listePl">`
+    + AP.notes.map((x) => `<li>${esc(x)}</li>`).join("") + `</ul></details>`;
+  h += `<div class="barreActions"><button class="bouton" id="apFabriquer" type="button">Fabriquer avec cette sélection</button>
+    <span class="petitgris">Avec les réglages du formulaire (quiz / vidéo, nom, essai…)</span><span class="erreurForm" id="apErreur" style="margin:0"></span></div>`;
+  $("apercu").innerHTML = h;
+  for (const c of $("apercu").querySelectorAll("input[data-cle]")) c.onchange = () => {
+    if (c.checked) apRetires.delete(c.dataset.cle); else apRetires.add(c.dataset.cle);
+    rendreApercu();
+  };
+  for (const c of $("apercu").querySelectorAll("input[data-pl]")) c.onchange = () => {
+    if (c.checked) apPlaylistsOff.delete(c.dataset.pl); else apPlaylistsOff.add(c.dataset.pl);
+    $("apRecalculer").hidden = !apPlaylistsOff.size;
+  };
+  for (const b of $("apercu").querySelectorAll(".lecture")) b.onclick = () => lire($("sonApercu"), b, b.dataset.src);
+  if ($("apRecalculer")) $("apRecalculer").onclick = () => {
+    let v; try { v = valeursForm(false); } catch (e) { return ($("apErreur").textContent = e.message); }
+    const deja = (AP.details.retirees || []).map((x) => String(x.id));
+    envoyer("/atelier/apercu", { ...v, duree: AP.duree, nombre: AP.nombre, exclure_playlists: [...deja, ...apPlaylistsOff] });
+  };
+  $("apFabriquer").onclick = async () => {
+    if (!usage) { $("apErreur").textContent = "Indiquez dans le formulaire si c'est pour le quiz, la vidéo, ou les deux."; $("usages").scrollIntoView({ block: "center" }); return; }
+    $("apErreur").textContent = "";
+    try {
+      await poster("/atelier/fabriquer", { apercu: AP.id, retirer: [...apRetires], usage, nom: $("nom").value,
+        oeuvre: $("oeuvre").value, essai: $("essai").checked, duree: AP.duree, nombre: AP.nombre,
+        debut: $("blocDebut").hidden ? 0 : +$("debut").value || 0 });
+      $("sonApercu").pause();
+      $("secApercu").hidden = true;
+      $("tFab").scrollIntoView({ behavior: "smooth", block: "start" });
+    } catch (e) { $("apErreur").textContent = e.message; }
+  };
+  rendreBoutons();
+}
+$("fermerApercu").onclick = () => { $("sonApercu").pause(); $("secApercu").hidden = true; };
+
+// ---------- éditeur de réponses ----------
+const editeur = { lot: null, data: null };
+const CHAMPS_ED = (oeuvre) => oeuvre
+  ? [["oeuvre", "Œuvre (film, spectacle)"], ["titre", "Titre de la chanson"], ["interprete", "Interprète"], ["artiste", "Artiste (Deezer, pour le quiz)"]]
+  : [["artiste", "Artiste"], ["titre", "Titre"], ["note", "Indication (facultatif)"]];
+async function chargerEditeur(lot, garderMessage) {
+  const r = await fetch(url("/atelier/lot", { lot }));
+  const d = await r.json();
+  if (!r.ok) return alert(d.erreur || "Blind test introuvable.");
+  editeur.lot = lot; editeur.data = d;
+  $("edNom").value = d.nom;
+  $("edInfo").innerHTML = (d.en_jeu ? `<div class="alerte">Une partie est en cours avec ce blind test : terminez-la pour pouvoir le modifier (l'écoute reste possible).</div>` : "")
+    + `<div class="petitgris">${d.nombre} extraits de ${d.duree} s · ${esc(d.source)}. Après « Enregistrer », le quiz est mis à jour tout seul${d.video ? " ; la vidéo, elle, est à refaire (bouton en bas)" : ""}.</div>`;
+  const champs = CHAMPS_ED(d.mode_oeuvre);
+  $("edListe").innerHTML = d.questions.map((q) => `
+    <div class="edLigne" data-n="${q.n}">
+      <span class="num">${String(q.n).padStart(2, "0")}</span>
+      <button class="lecture" type="button" data-n="${q.n}" title="Écouter l'extrait">▶</button>
+      <div class="edChamps">${champs.map(([k, lib]) => `<div><label>${lib}</label><input type="text" data-k="${k}" maxlength="150" value="${esc(q[k])}" ${d.en_jeu ? "disabled" : ""}></div>`).join("")}</div>
+      <div class="edBoutons"><button class="bouton discret petit" type="button" data-remplacer="${q.n}" ${d.en_jeu ? "disabled" : ""}>Remplacer</button></div>
+      ${q.alertes.length ? `<div class="edAlerte">⚠ ${q.alertes.map(esc).join(" · ")}</div>` : ""}
+    </div>`).join("");
+  for (const ligne of $("edListe").querySelectorAll(".edLigne")) {
+    const q = d.questions[+ligne.dataset.n - 1];
+    for (const i of ligne.querySelectorAll("input[data-k]")) i.oninput = () => ligne.classList.toggle("change",
+      [...ligne.querySelectorAll("input[data-k]")].some((x) => x.value.trim() !== (q[x.dataset.k] || "")));
+  }
+  for (const b of $("edListe").querySelectorAll(".lecture")) b.onclick = () =>
+    lire($("edSon"), b, url("/atelier/audio", { lot, n: b.dataset.n, v: d.modifie }));
+  for (const b of $("edListe").querySelectorAll("[data-remplacer]")) b.onclick = () => ouvrirRecherche(b.closest(".edLigne"));
+  $("edVideo").hidden = d.en_jeu;
+  $("edVideo").textContent = d.video ? (d.video_perimee ? "Refaire la vidéo (à jour des corrections)" : "Refaire la vidéo") : "Monter la vidéo";
+  $("edEnregistrer").disabled = d.en_jeu;
+  if (!garderMessage) $("edEtat").textContent = "";
+  if (!$("dEditeur").open) $("dEditeur").showModal();
+}
+function ouvrirRecherche(ligne) {
+  const ancien = ligne.querySelector(".edRecherche");
+  if (ancien) { ancien.remove(); return; }
+  const val = (k) => (ligne.querySelector(`input[data-k="${k}"]`) || {}).value || "";
+  const zone = document.createElement("div");
+  zone.className = "edRecherche";
+  zone.innerHTML = `<div class="ligne"><input type="text" value="${esc((val("interprete") || val("artiste")) + " " + val("titre"))}" style="flex:1;min-width:200px" aria-label="Rechercher sur Deezer">
+    <button class="bouton petit" type="button">Chercher sur Deezer</button></div><ul></ul>`;
+  ligne.appendChild(zone);
+  const champ = zone.querySelector("input"), liste = zone.querySelector("ul");
+  const chercher = async () => {
+    liste.innerHTML = `<li class="petitgris">Recherche…</li>`;
+    const r = await fetch(url("/atelier/chercher", { q: champ.value }));
+    const d = await r.json();
+    if (!r.ok) { liste.innerHTML = `<li class="petitgris">${esc(d.erreur)}</li>`; return; }
+    liste.innerHTML = d.resultats.length ? d.resultats.map((x) => `<li>
+      <button class="lecture" type="button" data-src="${esc(x.preview)}" title="Écouter">▶</button>
+      <span class="txt">${esc(x.artiste)} — ${esc(x.titre)} <small class="petitgris">${esc(x.album || "")}</small></span>
+      <button class="bouton petit" type="button" data-id="${x.id}">Choisir</button></li>`).join("") : `<li class="petitgris">Aucun résultat.</li>`;
+    for (const b of liste.querySelectorAll(".lecture")) b.onclick = () => lire($("edSon"), b, b.dataset.src);
+    for (const b of liste.querySelectorAll("[data-id]")) b.onclick = async () => {
+      const n = +ligne.dataset.n;
+      if (lignesModifiees().length) return alert("Enregistrez d'abord vos corrections (bouton « Enregistrer »), puis remplacez le morceau.");
+      if (!confirm(`Remplacer la question ${String(n).padStart(2, "0")} par « ${b.parentElement.querySelector(".txt").textContent.trim()} » ? Le nouvel extrait est téléchargé et découpé comme les autres.`)) return;
+      try {
+        await poster("/atelier/lot/remplacer", { lot: editeur.lot, n, id: +b.dataset.id });
+        $("edEtat").textContent = `Remplacement de la question ${String(n).padStart(2, "0")} en cours (voir « Fabrication »)…`;
+        zone.remove();
+      } catch (e) { alert(e.message); }
+    };
+  };
+  zone.querySelector("button").onclick = chercher;
+  champ.onkeydown = (ev) => { if (ev.key === "Enter") { ev.preventDefault(); chercher(); } };
+  chercher();
+}
+function lignesModifiees() {
+  return [...$("edListe").querySelectorAll(".edLigne.change")].map((ligne) => {
+    const m = { n: +ligne.dataset.n }, q = editeur.data.questions[m.n - 1];
+    for (const k of ["artiste", "titre", "oeuvre", "interprete", "note"]) {
+      const i = ligne.querySelector(`input[data-k="${k}"]`);
+      m[k] = i ? i.value.trim() : q[k];
+    }
+    return m;
+  });
+}
+$("edEnregistrer").onclick = async () => {
+  const modifs = lignesModifiees(), nom = $("edNom").value.trim();
+  try {
+    if (nom !== editeur.data.nom) await poster("/atelier/lot/renommer", { lot: editeur.lot, nom });
+    const d = modifs.length ? await poster("/atelier/lot/modifier", { lot: editeur.lot, modifs }) : { modifiees: [] };
+    $("edEtat").textContent = d.modifiees.length
+      ? `Enregistré : ${d.modifiees.length} réponse(s) corrigée(s). Le quiz se met à jour (voir « Fabrication »).`
+      : (nom !== editeur.data.nom ? "Nom enregistré." : "Rien à enregistrer.");
+    chargerEditeur(editeur.lot, true);
+  } catch (e) { $("edEtat").textContent = e.message; }
+};
+$("edVideo").onclick = async () => {
+  if (lignesModifiees().length && !confirm("Des corrections ne sont pas enregistrées : la vidéo sera montée sans elles. Continuer ?")) return;
+  try {
+    await poster("/atelier/lot/video", { lot: editeur.lot });
+    $("edEtat").textContent = "Montage de la vidéo lancé (5 à 10 min, voir « Fabrication »).";
+  } catch (e) { $("edEtat").textContent = e.message; }
+};
+$("edFermer").onclick = () => {
+  if (lignesModifiees().length && !confirm("Des corrections ne sont pas enregistrées. Fermer quand même ?")) return;
+  $("edSon").pause();
+  $("dEditeur").close();
+};
+$("dEditeur").addEventListener("cancel", (ev) => { if (lignesModifiees().length && !confirm("Des corrections ne sont pas enregistrées. Fermer quand même ?")) ev.preventDefault(); else $("edSon").pause(); });
+let version = -1, arrete = false, premier = true;
+async function boucle() {
+  if (arrete) return;
+  try {
+    const r = await fetch(url("/atelier/etat", { version }), { cache: "no-store" });
+    if (r.status === 403 || r.status === 404) {
+      $("deconnecte").textContent = "Cette page ne correspond plus au programme en cours : relancez « Blind test » (double-clic) et utilisez la nouvelle page.";
+      $("deconnecte").hidden = false; return;
+    }
+    E = await r.json();
+    $("deconnecte").hidden = true;
+    version = E.version;
+    if (premier) { initForm(); majSource(); premier = false; }
+    rendreFabrication(); rendrePartie(); rendreLots(); rendreBoutons();
+    boucle();
+  } catch {
+    $("deconnecte").textContent = "Programme arrêté ou injoignable : la fenêtre noire « Blind test » est-elle ouverte ? Nouvel essai…";
+    $("deconnecte").hidden = false;
+    setTimeout(boucle, 3000);
+  }
+}
+boucle();
+</script>
+</body>
+</html>

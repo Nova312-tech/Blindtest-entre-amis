@@ -1,0 +1,48 @@
+# Blind test « 35 langues du monde » : une chanson par langue.
+# Format : Artiste - Titre | Langue | Famille
+# La langue s'affiche dans la réponse et sert au mode « Quelle langue ? ».
+# Deux titres de la même famille ne passent jamais à la suite (le programme réordonne).
+# Les 7 dernières lignes sont des remplaçants (autres langues), utilisés seulement si un titre manque sur Deezer.
+PSY - Gangnam Style | Coréen | asie de l'est
+Luis Fonsi - Despacito | Espagnol | romane
+Nena - 99 Luftballons | Allemand | germanique
+Tarkan - Şımarık | Turc | turque
+t.A.T.u. - Ya Soshla S Uma | Russe | slave
+Khaled - Didi | Arabe | sémitique
+Master KG - Jerusalema | Zoulou | bantoue
+A.R. Rahman - Jai Ho | Hindi | indienne
+Loituma - Ievan Polkka | Finnois | finno-ougrienne
+Despina Vandi - Gia | Grec | grecque
+Michel Teló - Ai Se Eu Te Pego | Portugais | romane
+Kyu Sakamoto - Sukiyaki | Japonais | asie de l'est
+Snollebollekes - Links rechts | Néerlandais | germanique
+Idir - A Vava Inouva | Kabyle | berbère
+Kalush Orchestra - Stefania | Ukrainien | slave
+Ofra Haza - Im Nin'alu | Hébreu | sémitique
+Freddie Aguilar - Anak | Tagalog | austronésienne
+Domenico Modugno - Nel blu dipinto di blu | Italien | romane
+Daler Mehndi - Tunak Tunak Tun | Pendjabi | indienne
+Sigur Rós - Hoppípolla | Islandais | germanique
+Omega - Gyöngyhajú lány | Hongrois | finno-ougrienne
+Them Mushrooms - Jambo Bwana | Swahili | bantoue
+Donatan - My Słowianie | Polonais | slave
+Teresa Teng - The Moon Represents My Heart | Mandarin | asie de l'est
+Édith Piaf - La vie en rose | Français | romane
+Googoosh - Do Panjereh | Persan | iranienne
+Lena Philipsson - Det gör ont | Suédois | germanique
+Karel Gott - Lady Carneval | Tchèque | slave
+Kassav' - Zouk la sé sèl médikaman nou ni | Créole antillais | créole
+Carl Orff - O Fortuna | Latin | italique
+Michael Jackson - Billie Jean | Anglais | germanique
+O-Zone - Dragostea Din Tei | Roumain | romane
+Marija Šerifović - Molitva | Serbe | slave
+Cesária Évora - Sodade | Créole cap-verdien | créole
+Sau - Boig per tu | Catalan | romane
+# remplaçants
+Alan Stivell - Tri martolod | Breton | celtique
+Awilo Longomba - Coupé Bibamba | Lingala | bantoue
+Sơn Tùng M-TP - Hãy Trao Cho Anh | Vietnamien | asie du sud-est
+Clannad - Theme from Harry's Game | Irlandais (gaélique) | celtique
+Youssou N'Dour - Birima | Wolof | nigéro-congolaise
+Medina - Kun for mig | Danois | germanique
+Miriam Makeba - Pata Pata | Xhosa | bantoue

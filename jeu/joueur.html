@@ -1,0 +1,370 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<meta name="theme-color" content="#05061a">
+<title>Blind test</title>
+<style>
+  :root { --cyan: #46d2ff; --violet: #c7a2ff; --texte: #f4f6ff; --doux: #b9c3e6;
+    --a: #e5486b; --b: #3f8cff; --c: #f2b632; --d: #2fbf71; }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body { margin: 0; height: 100%; background: #05061a; color: var(--texte);
+    font-family: "Segoe UI", system-ui, -apple-system, Roboto, sans-serif; }
+  body { background: radial-gradient(120% 80% at 50% 0%, #1b1450 0%, #05061a 60%) fixed; }
+  main { min-height: 100%; display: flex; flex-direction: column;
+    padding: calc(16px + env(safe-area-inset-top)) 16px calc(16px + env(safe-area-inset-bottom)); }
+  [hidden] { display: none !important; }
+  header { display: flex; justify-content: space-between; align-items: center; font-weight: 700; color: var(--doux); }
+  header .score { color: var(--cyan); }
+  .ecran { flex: 1; display: flex; flex-direction: column; justify-content: center; text-align: center; gap: 14px; }
+  h1 { margin: 0; font-size: 30px; font-weight: 900; text-shadow: 0 0 14px rgba(70, 210, 255, .5); }
+  .etiquette { letter-spacing: .14em; text-transform: uppercase; color: var(--cyan); font-size: 13px; font-weight: 700; }
+  p { margin: 0; color: var(--doux); font-size: 17px; }
+  input { font-size: 20px; padding: 14px; border-radius: 12px; border: 2px solid rgba(70, 210, 255, .5);
+    background: rgba(255, 255, 255, .06); color: var(--texte); text-align: center; width: 100%; }
+  button.principal { font-size: 20px; font-weight: 800; padding: 16px; border: 0; border-radius: 12px;
+    background: var(--cyan); color: #05061a; width: 100%; }
+  .choix { flex: 1; display: grid; grid-template-rows: repeat(4, 1fr); gap: 12px; margin-top: 12px; }
+  .choix button { border: 0; border-radius: 16px; color: #fff; text-align: left; padding: 12px 16px;
+    display: flex; align-items: center; gap: 14px; font-size: 18px; font-weight: 800; min-height: 70px;
+    box-shadow: 0 6px 0 rgba(0, 0, 0, .3); }
+  .choix button:active { transform: translateY(3px); box-shadow: 0 3px 0 rgba(0, 0, 0, .3); }
+  .choix .lettre { flex: none; width: 44px; height: 44px; display: grid; place-items: center; border-radius: 10px;
+    background: rgba(0, 0, 0, .25); font-size: 24px; font-weight: 900; }
+  .choix .artiste { display: block; font-size: 14px; font-weight: 600; opacity: .9; }
+  .choix button > span:last-child { min-width: 0; overflow-wrap: anywhere; }
+  .verdict, .reponse { overflow-wrap: anywhere; }
+  .c0 { background: var(--a); } .c1 { background: var(--b); } .c2 { background: var(--c); color: #1b1300 !important; }
+  .c3 { background: var(--d); }
+  .verdict { border-radius: 20px; padding: 26px 18px; }
+  .verdict.bon { background: linear-gradient(160deg, #2fbf71, #1a8a50); }
+  .verdict.rate { background: linear-gradient(160deg, #e5486b, #9b2140); }
+  .verdict .gros { font-size: 44px; font-weight: 900; }
+  .reponse { font-size: 18px; color: var(--texte); }
+  .rang { font-size: 22px; font-weight: 800; color: var(--violet); }
+  .attente { width: 64px; height: 64px; margin: 8px auto; border-radius: 50%;
+    border: 5px solid rgba(70, 210, 255, .2); border-top-color: var(--cyan); animation: tourne 1s linear infinite; }
+  @keyframes tourne { to { transform: rotate(360deg); } }
+  #erreur { color: #ff8fa8; min-height: 20px; }
+  /* animateur : le premier inscrit pilote la partie depuis son téléphone */
+  body.anime main { padding-bottom: calc(96px + env(safe-area-inset-bottom)); }
+  #barreAnim { position: fixed; left: 0; right: 0; bottom: 0; z-index: 8; display: flex; gap: 8px; align-items: center;
+    padding: 10px 12px calc(10px + env(safe-area-inset-bottom)); background: rgba(5, 6, 26, .94);
+    border-top: 1px solid rgba(70, 210, 255, .35); }
+  #barreAnim .couronne { font-size: 12px; color: var(--doux); line-height: 1.2; flex: none; max-width: 30%; }
+  #barreAnim button { flex: 1; font-size: 17px; font-weight: 800; padding: 14px 8px; border: 0; border-radius: 12px;
+    background: var(--cyan); color: #05061a; }
+  #barreAnim button.second { flex: none; background: rgba(255, 255, 255, .12); color: var(--texte); }
+  #barreAnim button:disabled { opacity: .35; }
+  #perdu { position: fixed; top: 0; left: 0; right: 0; z-index: 9; background: #7a1f3a; color: #fff; text-align: center;
+    font-weight: 700; padding: 8px 12px calc(8px + env(safe-area-inset-top) * 0); }
+  .equipes { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 8px; }
+  .equipes button { border: 3px solid transparent; border-radius: 14px; padding: 14px 8px; font-size: 18px;
+    font-weight: 900; color: #fff; opacity: .55; }
+  .equipes button.moi { opacity: 1; border-color: #fff; box-shadow: 0 0 16px rgba(255, 255, 255, .45); }
+  .double { align-self: center; margin-top: 8px; padding: 4px 16px; border-radius: 99px; font-weight: 900;
+    letter-spacing: .1em; color: #1b1300; background: linear-gradient(90deg, #f2b632, #ffe08a); }
+  .choix [data-plein] { letter-spacing: .04em; }
+  #annee { flex: 1; display: flex; flex-direction: column; justify-content: center; gap: 18px; text-align: center; }
+  #anneeValeur { font-size: 72px; font-weight: 900; letter-spacing: .04em; text-shadow: 0 0 18px rgba(70, 210, 255, .5); }
+  #anneeCurseur { width: 100%; accent-color: var(--cyan); height: 36px; }
+  .pas { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
+  .pas button { font-size: 20px; font-weight: 800; padding: 14px 0; border-radius: 12px; border: 0;
+    background: rgba(255, 255, 255, .1); color: var(--texte); }
+  .pochetteTel { width: 140px; height: 140px; border-radius: 14px; object-fit: cover; align-self: center;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, .5); }
+  .bonus { font-size: 17px; font-weight: 800; color: #ffe08a; }
+  .recap { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; text-align: left; }
+  .recap div { background: rgba(255, 255, 255, .06); border-radius: 12px; padding: 10px 12px; font-size: 14px; color: var(--doux); }
+  .recap b { display: block; font-size: 22px; color: var(--texte); }
+</style>
+</head>
+<body>
+<div id="perdu" hidden>Connexion perdue… reconnexion</div>
+<div id="barreAnim" hidden></div>
+<main>
+  <header id="entete" hidden><span id="pseudo"></span><span class="score" id="score"></span></header>
+
+  <section class="ecran" id="inscription">
+    <div class="etiquette">Blind test</div>
+    <h1>Choisis ton pseudo</h1>
+    <input id="saisieCode" inputmode="numeric" maxlength="7" autocomplete="off" placeholder="Code de la partie (6 chiffres)">
+    <input id="saisie" maxlength="16" autocomplete="off" autocapitalize="words" placeholder="Ton pseudo" enterkeyhint="go">
+    <button class="principal" id="rejoindre">Rejoindre</button>
+    <p id="erreur"></p>
+  </section>
+
+  <section class="ecran" id="salle" hidden>
+    <div class="etiquette">Tu es dans la partie</div>
+    <h1 id="bienvenue"></h1>
+    <div class="attente"></div>
+    <p id="texteAttente">Regarde l'écran : la partie va commencer.</p>
+    <div id="choixEquipe" hidden><p>Ton équipe (touche pour changer) :</p><div class="equipes" id="equipes"></div></div>
+  </section>
+
+  <section id="vote" hidden style="flex:1;display:flex;flex-direction:column">
+    <div class="etiquette" style="text-align:center;margin-top:8px">Question <span id="numero"></span> — à toi de jouer !</div>
+    <div id="consigneTel" style="text-align:center;font-size:22px;font-weight:900;color:var(--violet);margin-top:6px"></div>
+    <div class="double" id="doubleTel" hidden>×2 POINTS</div>
+    <div class="choix" id="boutons"></div>
+    <div id="annee" hidden>
+      <div id="anneeValeur">2000</div>
+      <input type="range" id="anneeCurseur" min="1940" max="2026" value="2000" aria-label="Année">
+      <div class="pas"><button data-pas="-10">−10</button><button data-pas="-1">−1</button><button data-pas="1">+1</button><button data-pas="10">+10</button></div>
+      <button class="principal" id="anneeValider">Valider cette année</button>
+    </div>
+  </section>
+
+  <section class="ecran" id="envoye" hidden>
+    <h1>Réponse envoyée ✔</h1>
+    <div class="attente"></div>
+    <p>Attends la fin de l'extrait…</p>
+  </section>
+
+  <section class="ecran" id="resultat" hidden>
+    <img class="pochetteTel" id="pochetteTel" alt="" hidden>
+    <div class="verdict" id="verdict"></div>
+    <p class="rang" id="rang"></p>
+  </section>
+
+  <section class="ecran" id="fin" hidden>
+    <div class="etiquette">Partie terminée</div>
+    <h1 id="finTitre"></h1>
+    <p class="rang" id="finRang"></p>
+    <p id="finEquipe" class="bonus"></p>
+    <div class="recap" id="recap"></div>
+  </section>
+</main>
+
+<script>
+const $ = (id) => document.getElementById(id);
+const LETTRES = ["A", "B", "C", "D"];
+let jeton = null, partieId = null, flux = null, dejaVote = null, vibre = null, minuteurs = [], anneeQuestion = null;
+const NOMS_EQ = ["Rouges", "Bleus", "Jaunes", "Verts"], COULEURS_EQ = ["#e5486b", "#3f8cff", "#f2b632", "#2fbf71"];
+const virgule = (x) => String(x).replace(".", ",");
+const lire = (k) => { try { return localStorage.getItem(k); } catch { return null; } };
+const ecrire = (k, v) => { try { localStorage.setItem(k, v); } catch {} };
+function echapper(t) { const d = document.createElement("div"); d.textContent = t === null || t === undefined ? "" : t; return d.innerHTML.replace(/"/g, "&quot;").replace(/'/g, "&#39;"); }
+function montrer(nom) {
+  for (const s of ["inscription", "salle", "vote", "envoye", "resultat", "fin"]) $(s).hidden = s !== nom;
+  $("entete").hidden = nom === "inscription";
+}
+function ordinal(n) { return n === 1 ? "1er" : `${n}e`; }
+
+const codeUrl = new URLSearchParams(location.search).get("code");
+if (codeUrl) { $("saisieCode").value = codeUrl; $("saisieCode").hidden = true; }  // QR code : rien à taper
+
+async function rejoindre(pseudo, ancienJeton) {
+  const code = $("saisieCode").value.replace(/\D/g, "");
+  const r = await fetch("/rejoindre", { method: "POST", headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ pseudo, jeton: ancienJeton, code }) });
+  const d = await r.json();
+  if (!r.ok) {
+    $("erreur").textContent = d.erreur || "Impossible de rejoindre.";
+    if (codeUrl) $("saisieCode").hidden = false;      // code du QR périmé (partie relancée) : on le redemande
+    return;
+  }
+  jeton = d.jeton; partieId = d.partie;
+  ecrire("bt_jeton", jeton); ecrire("bt_partie", partieId); ecrire("bt_pseudo", d.pseudo);
+  ecouter();
+}
+
+// mises à jour : le serveur répond dès que la partie change (attente longue) ; marche aussi via Internet
+let version = -1, tour = 0, echecs = 0;
+function ecouter() {
+  const monTour = ++tour;                              // une seule boucle active à la fois
+  version = -1;
+  const boucle = async () => {
+    if (monTour !== tour || !jeton) return;
+    try {
+      const r = await fetch(`/etat?jeton=${encodeURIComponent(jeton)}&version=${version}`, { cache: "no-store" });
+      const e = await r.json();
+      if (monTour !== tour) return;
+      version = e.version;
+      rendre(e);
+      boucle();
+      echecs = 0; $("perdu").hidden = true;
+    } catch {
+      if (++echecs >= 3) $("perdu").hidden = false;
+      setTimeout(boucle, 1000);
+    }
+  };
+  boucle();
+}
+
+function rendre(e) {
+  if (e.moi === null) {                                 // partie redémarrée : on se réinscrit
+    jeton = null; ecrire("bt_jeton", ""); montrer("inscription"); tour++; return;
+  }
+  const moi = e.moi;
+  minuteurs.forEach((id) => { clearTimeout(id); clearInterval(id); }); minuteurs = [];
+  barreAnimateur(e, moi);
+  $("pseudo").innerHTML = (moi.equipe !== null && moi.equipe !== undefined
+    ? `<span style="display:inline-block;width:12px;height:12px;border-radius:50%;background:${COULEURS_EQ[moi.equipe]};margin-right:6px"></span>` : "")
+    + echapper(moi.pseudo) + (moi.serie >= 2 ? ` <span style="color:#ffb35c">🔥${moi.serie}</span>` : "");
+  $("score").textContent = `${moi.score.toLocaleString("fr-FR")} pts`;
+  if (e.phase === "attente") {
+    $("bienvenue").textContent = moi.pseudo;
+    $("texteAttente").textContent = (moi.animateur ? "Tu es l'animateur : c'est toi qui lances la partie (bouton en bas). "
+      : `Regarde l'écran${e.animateur ? ` : ${e.animateur} lance la partie` : ""}. `)
+      + `${e.nb_joueurs} joueur${e.nb_joueurs > 1 ? "s" : ""} inscrit${e.nb_joueurs > 1 ? "s" : ""}.`
+      + (e.mode !== "classique" ? ` Mode : ${e.nom_mode}.` : "");
+    $("choixEquipe").hidden = !e.equipes;
+    if (e.equipes) {
+      $("equipes").innerHTML = e.equipes.slice().sort((a, b) => a.indice - b.indice).map((x) =>
+        `<button style="background:${x.couleur}" data-e="${x.indice}" class="${x.indice === moi.equipe ? "moi" : ""}">${echapper(x.nom)}<br><small>${x.membres} joueur${x.membres > 1 ? "s" : ""}</small></button>`).join("");
+      for (const b of $("equipes").querySelectorAll("button")) b.onclick = () =>
+        fetch("/equipe", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ jeton, equipe: +b.dataset.e }) });
+    }
+    montrer("salle");
+  } else if (e.phase === "question") {
+    const cleQ = `${e.manche}-${e.numero}`;            // une question 1 d'une nouvelle partie n'est pas l'ancienne
+    if (moi.a_vote || dejaVote === cleQ) { montrer("envoye"); return; }
+    $("numero").textContent = `${e.numero} / ${e.total}`;
+    $("consigneTel").textContent = e.pause ? "⏸ Pause : attends la reprise" : (e.consigne || "");
+    $("consigneTel").hidden = !e.consigne && !e.pause;
+    $("doubleTel").hidden = !e.double;
+    $("annee").hidden = e.type !== "annee";
+    $("boutons").hidden = e.type === "annee";
+    if (e.type === "annee") {                           // mode « Trouver l'année » : curseur
+      if (anneeQuestion !== cleQ) { anneeQuestion = cleQ; reglerAnnee(2000); }
+      $("anneeValider").disabled = !!e.pause;
+      $("anneeValider").onclick = () => voter(cleQ, +$("anneeCurseur").value);
+      montrer("vote");
+      return;
+    }
+    $("boutons").innerHTML = e.choix.map((c, i) => `
+      <button class="c${i}" data-i="${i}"><span class="lettre">${LETTRES[i]}</span>
+        <span><span class="t">${echapper(e.forme === "meme_titre" ? c.artiste : c.titre)}</span><span class="artiste">${echapper(e.forme === "meme_titre" ? c.titre : c.artiste)}</span></span></button>`).join("");
+    for (const b of $("boutons").querySelectorAll("button")) {
+      b.onclick = () => voter(cleQ, +b.dataset.i);
+      b.disabled = !!e.pause;
+      b.style.opacity = e.pause ? ".4" : "";
+    }
+    if (e.lettres) {                                    // lettre par lettre : on peut répondre à tout moment
+      const champs = $("boutons").querySelectorAll(".t, .artiste"), recu = performance.now();
+      champs.forEach((x) => { x.dataset.plein = x.textContent; });
+      const ecrire = () => {
+        const ecoule = e.duree - e.reste_ms / 1000 + (e.pause ? 0 : (performance.now() - recu) / 1000);
+        champs.forEach((x) => { const t = masquer(x.dataset.plein, ecoule / e.lettres); if (x.textContent !== t) x.textContent = t; });
+        return ecoule < e.lettres;
+      };
+      if (ecrire() && !e.pause) { const id = setInterval(() => { if (!ecrire()) clearInterval(id); }, 100); minuteurs.push(id); }
+    }
+    montrer("vote");
+  } else if (e.phase === "resultats") {
+    const d = moi.dernier || {};
+    const bonneTxt = e.type === "annee" ? `<b>${e.annee}</b>` : `<b>${echapper(e.choix[e.bonne].titre)}</b><br>${echapper(e.choix[e.bonne].artiste)}`;
+    const extras = [
+      d.double && d.gain ? "×2 points !" : "",
+      d.bonus ? `🔥 Série de ${d.serie} : +${d.bonus}` : "",
+      d.plus_rapide ? "⚡ Tu as été le plus rapide !" : "",
+    ].filter(Boolean).map((x) => `<div class="bonus">${x}</div>`).join("");
+    $("pochetteTel").hidden = !e.pochette;
+    if (e.pochette) $("pochetteTel").src = e.pochette;
+    $("verdict").className = "verdict " + (d.bon ? "bon" : "rate");
+    if (e.type === "annee") {
+      const titre = d.choix === null || d.choix === undefined ? "Trop tard !" : d.ecart === 0 ? "Pile ! 🎯" : d.bon ? "Presque !" : "Raté !";
+      $("verdict").innerHTML = `<div class="gros">${titre}</div><div class="reponse">C'était ${bonneTxt}${d.choix ? ` — tu as dit ${d.choix} (${d.ecart} an${d.ecart > 1 ? "s" : ""} d'écart)` : ""}<br>${echapper(e.chanson || "")}</div>`
+        + (d.gain ? `<div class="reponse">+${d.gain} points</div>` : "") + extras;
+    } else {
+      $("verdict").innerHTML = d.bon
+        ? `<div class="gros">Bravo !</div><div class="reponse">+${d.gain} points</div>${extras}`
+        : `<div class="gros">${d.choix === null ? "Trop tard !" : "Raté !"}</div>
+           <div class="reponse">C'était : ${bonneTxt}</div>`;
+    }
+    $("rang").textContent = `Tu es ${ordinal(moi.rang)} sur ${e.nb_joueurs}`;
+    if (vibre !== `${e.manche}-${e.numero}` && navigator.vibrate) { navigator.vibrate(d.bon ? 80 : [60, 60, 60]); vibre = `${e.manche}-${e.numero}`; }
+    montrer("resultat");
+  } else if (e.phase === "fin") {
+    $("finTitre").textContent = moi.rang === 1 ? "Victoire ! 🏆" : "Bien joué !";
+    $("finRang").textContent = `Tu termines ${ordinal(moi.rang)} sur ${e.nb_joueurs} avec ${moi.score.toLocaleString("fr-FR")} points`;
+    const eq = e.equipes && moi.equipe !== null ? e.equipes.findIndex((x) => x.indice === moi.equipe) : -1;
+    $("finEquipe").textContent = eq >= 0 ? (eq === 0 ? `🏆 Ton équipe (${e.equipes[0].nom}) a gagné !` : `Ton équipe (${e.equipes[eq].nom}) termine ${ordinal(eq + 1)}.`) : "";
+    const bl = moi.bilan || {};
+    $("recap").innerHTML = `<div>Bonnes réponses<b>${bl.bonnes || 0} / ${bl.total || 0}</b></div>
+      <div>Meilleure série<b>${bl.serie_max ? bl.serie_max + " 🔥" : "—"}</b></div>
+      <div>Réponse la plus rapide<b>${bl.plus_rapide !== null && bl.plus_rapide !== undefined ? virgule(bl.plus_rapide) + " s" : "—"}</b></div>
+      <div>Points<b>${moi.score.toLocaleString("fr-FR")}</b></div>`;
+    montrer("fin");
+  }
+}
+
+let LETTRE;
+try { LETTRE = new RegExp("[\\p{L}\\p{N}]", "u"); } catch (e) { LETTRE = /[0-9A-Za-z\u00C0-\u024F]/; }
+// mode « lettre par lettre » : les lettres pas encore révélées deviennent des _ (espaces et ponctuation gardés)
+function masquer(texte, f) {
+  const lettre = LETTRE, car = [...(texte || "")];
+  let n = Math.floor(car.filter((c) => lettre.test(c)).length * Math.min(1, Math.max(0, f)));
+  return car.map((c) => (!lettre.test(c) ? c : n-- > 0 ? c : "_")).join("");
+}
+
+// ---------- animateur : boutons pour piloter la partie depuis ce téléphone ----------
+async function animer(action) {
+  try {
+    await fetch("/animateur", { method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ jeton, action }) });
+  } catch (err) {}
+}
+function barreAnimateur(e, moi) {
+  const b = $("barreAnim");
+  document.body.classList.toggle("anime", !!moi.animateur);
+  if (!moi.animateur) { b.hidden = true; return; }
+  let boutons = "";
+  if (e.phase === "attente") {
+    boutons = `<button data-a="suivant" ${e.nb_joueurs ? "" : "disabled"}>▶ ${e.numero > 0 ? `Reprendre (question ${e.numero + 1})` : "Lancer la partie"}</button>`;
+  } else if (e.phase === "question") {
+    boutons = `<button class="second" data-a="pause">${e.pause ? "▶ Reprendre" : "⏸ Pause"}</button><button data-a="reveler">Révéler la réponse</button>`;
+  } else if (e.phase === "resultats") {
+    boutons = `<button data-a="suivant">${e.numero < e.total ? "Question suivante ▶" : "Voir le podium 🏆"}</button>`;
+  } else if (e.phase === "fin") {
+    boutons = `<button data-a="rejouer">↻ Rejouer (mêmes joueurs)</button>`;
+  }
+  b.innerHTML = `<span class="couronne">👑 Tu es l'animateur</span>${boutons}`;
+  b.hidden = !boutons;
+  for (const x of b.querySelectorAll("button")) x.onclick = () => {
+    if (x.dataset.a === "rejouer" && !confirm("Rejouer ce blind test avec les mêmes joueurs ? Les scores repartent à zéro.")) return;
+    x.disabled = true;
+    animer(x.dataset.a);
+  };
+}
+
+function reglerAnnee(v) {
+  v = Math.max(1940, Math.min(2026, v));
+  $("anneeCurseur").value = v; $("anneeValeur").textContent = v;
+}
+$("anneeCurseur").oninput = () => reglerAnnee(+$("anneeCurseur").value);
+for (const b of document.querySelectorAll(".pas button")) b.onclick = () => reglerAnnee(+$("anneeCurseur").value + +b.dataset.pas);
+
+async function voter(numero, i) {
+  dejaVote = numero; montrer("envoye");
+  if (navigator.vibrate) navigator.vibrate(30);
+  try {
+    await fetch("/voter", { method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ jeton, choix: i }) });
+  } catch {}
+}
+
+$("rejoindre").onclick = async () => {
+  const p = $("saisie").value.trim();
+  if (!p) { $("erreur").textContent = "Entre un pseudo pour jouer."; return; }
+  $("rejoindre").disabled = true;
+  $("erreur").textContent = "";
+  try { await rejoindre(p, null); } catch { $("erreur").textContent = "Connexion impossible : vérifie ta connexion Internet ou le Wi-Fi."; }
+  $("rejoindre").disabled = false;
+};
+$("saisie").addEventListener("keydown", (ev) => { if (ev.key === "Enter") $("rejoindre").click(); });
+
+// retour sur la page (écran verrouillé, onglet rechargé) : on reprend sa place sans perdre ses points
+// (la réponse peut arriver tard via Internet : elle ne doit ni effacer un pseudo déjà tapé,
+//  ni annuler une inscription faite entre-temps)
+fetch("/infos").then((r) => r.json()).then((i) => {
+  if (jeton) return;                                  // déjà inscrit pendant ce temps
+  if (!$("saisie").value) $("saisie").value = lire("bt_pseudo") || "";
+  const ancien = lire("bt_jeton");
+  if (ancien && lire("bt_partie") === i.partie) { jeton = ancien; partieId = i.partie; ecouter(); }
+}).catch(() => {});
+</script>
+</body>
+</html>

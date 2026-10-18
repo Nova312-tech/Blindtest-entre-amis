@@ -1,0 +1,28 @@
+# Exemple de liste : une chanson par ligne, au format « Artiste - Titre ».
+# Collez ces lignes dans l'atelier (case « Thème ou playlist »), ou adaptez-les à vos goûts.
+# On peut ajouter une indication après un « | » : elle s'affiche avec la réponse (ex. : « | Anglais »).
+a-ha - Take on Me
+Daniel Balavoine - L'Aziza
+Madonna - Like a Virgin
+Indochine - L'aventurier
+Michael Jackson - Billie Jean
+France Gall - Ella, elle l'a
+Cyndi Lauper - Girls Just Want to Have Fun
+Jean-Jacques Goldman - Quand la musique est bonne
+Queen - Another One Bites the Dust
+Desireless - Voyage voyage
+Bonnie Tyler - Total Eclipse of the Heart
+Étienne Daho - Week-end à Rome
+Tears for Fears - Everybody Wants to Rule the World
+Gold - Capitaine abandonné
+Toto - Africa
+Images - Les Démons de minuit
+Eurythmics - Sweet Dreams (Are Made of This)
+Jean-Pierre François - Je te survivrai
+Whitney Houston - I Wanna Dance with Somebody (Who Loves Me)
+Mylène Farmer - Libertine
+Bon Jovi - Livin' on a Prayer
+Gilbert Montagné - On va s'aimer
+Kim Wilde - Kids in America
+Téléphone - Cendrillon
+Dire Straits - Money for Nothing

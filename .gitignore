@@ -1,0 +1,21 @@
+# tout ce que le programme fabrique ou mémorise sur le PC de chacun
+extraits_*/
+essai_*/
+archives/
+cache/
+slides/
+_travail/
+__pycache__/
+historique.json
+historique.json.bak
+journal.txt
+journal.ancien.txt
+_atelier.url
+_tunnel.pid
+_generation.lock
+_partie_en_cours.*
+*.mp3
+*.mp4
+fond.png
+fond.jpg
+countdown*.mp4

@@ -1,0 +1,511 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Blind test — écran principal</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<style>
+  :root {
+    --cyan: #46d2ff; --violet: #c7a2ff; --texte: #f4f6ff; --doux: #b9c3e6;
+    --a: #e5486b; --b: #3f8cff; --c: #f2b632; --d: #2fbf71;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; overflow: hidden; background: #05061a; color: var(--texte);
+    font-family: "Segoe UI", system-ui, sans-serif; }
+  body { background: #05061a url(/fond) center / cover no-repeat; }
+  body::before { content: ""; position: fixed; inset: 0; background: rgba(5, 6, 26, .55); }
+  main { position: relative; height: 100%; display: flex; flex-direction: column; padding: 3vh 4vw; }
+  [hidden] { display: none !important; }
+  .etiquette { font-family: Bahnschrift, "Segoe UI", sans-serif; letter-spacing: .12em; color: var(--cyan);
+    text-transform: uppercase; font-size: 2.2vh; }
+  h1 { font-family: "Segoe UI Black", "Segoe UI", sans-serif; font-weight: 900; margin: 0;
+    text-shadow: 0 0 2vh rgba(70, 210, 255, .55); }
+  button.action { font: 700 2.6vh Bahnschrift, "Segoe UI", sans-serif; letter-spacing: .06em; color: #05061a;
+    background: var(--cyan); border: 0; border-radius: 1.2vh; padding: 1.6vh 3.2vw; cursor: pointer;
+    box-shadow: 0 0 3vh rgba(70, 210, 255, .45); }
+  button.action:disabled { opacity: .35; cursor: default; box-shadow: none; }
+  .aide { color: var(--doux); font-size: 1.7vh; margin-top: 1vh; }
+
+  /* salle d'attente */
+  #attente { flex: 1; display: grid; grid-template-columns: auto 1fr; gap: 5vw; align-items: center; }
+  #qr { background: #fff; padding: 2vh; border-radius: 2vh; box-shadow: 0 0 5vh rgba(70, 210, 255, .35); }
+  #qr img, #qr canvas { display: block; width: 34vh !important; height: 34vh !important; }
+  #url { font: 700 3vh Bahnschrift, sans-serif; color: var(--violet); margin: 1.5vh 0 2.5vh; word-break: break-all; }
+  #code { font: 900 7vh Bahnschrift, sans-serif; letter-spacing: .12em; margin: .5vh 0 2.5vh;
+    text-shadow: 0 0 2vh rgba(70, 210, 255, .6); }
+  #inscrits { display: flex; flex-wrap: wrap; gap: 1.2vh; margin: 2vh 0 3vh; min-height: 6vh; }
+  .pseudo { background: rgba(70, 210, 255, .14); border: 1px solid rgba(70, 210, 255, .5); padding: 1vh 2vh;
+    border-radius: 99px; font-size: 3.2vh; font-weight: 700; animation: arrive .35s ease-out;
+    font-family: inherit; color: inherit; cursor: pointer; }
+  .pseudo:hover { background: rgba(229, 72, 107, .35); border-color: var(--a); text-decoration: line-through; }
+  @keyframes arrive { from { transform: scale(.4); opacity: 0; } }
+
+  /* question */
+  #question { flex: 1; display: flex; flex-direction: column; }
+  .entete { display: flex; justify-content: space-between; align-items: center; }
+  #compteurVotes { font: 700 2.6vh Bahnschrift, sans-serif; color: var(--doux); }
+  .centre { flex: 1; display: flex; align-items: center; justify-content: center; }
+  #anneau { width: 30vh; height: 30vh; position: relative; }
+  #anneau svg { width: 100%; height: 100%; transform: rotate(-90deg); filter: drop-shadow(0 0 1.2vh var(--cyan)); }
+  #anneau .fondAnneau { stroke: rgba(70, 210, 255, .18); }
+  #anneau .arc { stroke: var(--cyan); transition: stroke .3s; }
+  #anneau.urgent .arc { stroke: #ff6ec7; }
+  #chiffre { position: absolute; inset: 0; display: grid; place-items: center; font: 300 11vh "Segoe UI Light", "Segoe UI", sans-serif; }
+  .choix { display: grid; grid-template-columns: 1fr 1fr; gap: 1.6vh; }
+  #consigne { text-align: center; font: 800 4.2vh "Segoe UI", sans-serif; color: var(--violet); margin-bottom: 2vh;
+    min-height: 5vh; text-shadow: 0 0 1.6vh rgba(199, 162, 255, .5); }
+  .carte { position: relative; display: flex; align-items: center; gap: 2vh; min-height: 13vh; padding: 1.6vh 2.4vh;
+    border-radius: 1.6vh; font-size: 3vh; font-weight: 700; box-shadow: 0 .8vh 2.4vh rgba(0, 0, 0, .35);
+    transition: opacity .3s, transform .3s; }
+  .carte .lettre { flex: none; width: 7vh; height: 7vh; display: grid; place-items: center; border-radius: 1vh;
+    background: rgba(0, 0, 0, .25); font: 900 4vh Bahnschrift, sans-serif; }
+  .carte .artiste { display: block; font-weight: 600; font-size: 2.3vh; opacity: .9; }
+  .carte .barre { position: absolute; right: 2vh; bottom: 1vh; font: 700 2.4vh Bahnschrift, sans-serif; }
+  .c0 { background: var(--a); } .c1 { background: var(--b); } .c2 { background: var(--c); color: #1b1300; } .c3 { background: var(--d); }
+  .revele .carte:not(.bonne) { opacity: .28; transform: scale(.97); }
+  .revele .carte.bonne { outline: .6vh solid #fff; box-shadow: 0 0 5vh rgba(255, 255, 255, .6); }
+
+  /* résultats + classement */
+  #resultats { flex: 1; display: grid; grid-template-columns: 1.3fr 1fr; gap: 3vw; align-items: start; margin-top: 2vh; }
+  #bonneReponse h1 { font-size: 6vh; line-height: 1.1; }
+  #bonneReponse .artiste { font-size: 3.4vh; color: var(--violet); font-weight: 600; margin-top: 1vh; }
+  #bonneReponse .info { font-size: 2.2vh; color: var(--doux); margin-top: 1vh; }
+  .classement { list-style: none; margin: 1.5vh 0 0; padding: 0; }
+  .classement li { display: grid; grid-template-columns: 5vh 1fr auto auto; gap: 1.5vh; align-items: center;
+    background: rgba(5, 6, 26, .6); border: 1px solid rgba(70, 210, 255, .25); border-radius: 1.2vh;
+    padding: 1.1vh 1.8vh; margin-bottom: 1vh; font-size: 2.6vh; }
+  .classement .rang { font: 900 2.8vh Bahnschrift, sans-serif; color: var(--cyan); }
+  .classement .score { font: 700 2.6vh Bahnschrift, sans-serif; }
+  .classement .gain { font: 700 2vh Bahnschrift, sans-serif; color: var(--d); min-width: 8vh; text-align: right; }
+  .pied { display: flex; justify-content: flex-end; align-items: center; gap: 2vw; margin-top: 2vh; }
+
+  /* podium */
+  #fin { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; }
+  #podium { display: flex; align-items: flex-end; gap: 3vw; margin: 5vh 0 3vh; }
+  .marche { width: 22vh; border-radius: 1.4vh 1.4vh 0 0; display: flex; flex-direction: column; justify-content: flex-start;
+    align-items: center; padding-top: 2vh; background: linear-gradient(180deg, rgba(70, 210, 255, .5), rgba(199, 162, 255, .25)); }
+  .marche .nom { font-size: 3vh; font-weight: 800; } .marche .pts { font: 700 2.4vh Bahnschrift, sans-serif; color: var(--doux); }
+  .marche .place { font: 900 7vh Bahnschrift, sans-serif; color: #fff; text-shadow: 0 0 2vh var(--cyan); }
+  .commandes { display: flex; gap: 1vh; align-items: center; }
+  .commandes button, #pleinEcran { font: 700 1.7vh Bahnschrift, "Segoe UI", sans-serif; color: var(--texte);
+    background: rgba(5, 6, 26, .6); border: 1px solid rgba(70, 210, 255, .45); border-radius: 1vh;
+    padding: .8vh 1.4vh; cursor: pointer; }
+  .commandes button:hover, #pleinEcran:hover { background: rgba(70, 210, 255, .2); }
+  #pleinEcran { position: fixed; bottom: 1.5vh; left: 1.5vw; z-index: 3; opacity: .55; }
+  #pleinEcran:hover { opacity: 1; }
+  .enpause #anneau { opacity: .45; }
+  #bandeauPause { text-align: center; font: 900 4vh Bahnschrift, sans-serif; color: var(--c); letter-spacing: .1em; }
+  /* modes, bonus, équipes */
+  #modeNom { color: var(--violet); margin-left: 1.5vw; }
+  #bandeauDouble { align-self: center; font: 900 3.4vh Bahnschrift, sans-serif; letter-spacing: .12em; color: #1b1300;
+    background: linear-gradient(90deg, #f2b632, #ffe08a); padding: .6vh 2.4vw; border-radius: 99px; margin-top: 1vh;
+    box-shadow: 0 0 4vh rgba(242, 182, 50, .6); animation: battre 1s ease-in-out infinite; }
+  @keyframes battre { 50% { transform: scale(1.06); } }
+  .carte [data-plein] { letter-spacing: .04em; }
+  @keyframes apparait { from { transform: scale(.85); opacity: 0; } }
+  #annee { text-align: center; font: 900 5vh Bahnschrift, sans-serif; color: var(--doux); margin: 2vh 0 4vh; }
+  .reponseHaut { display: flex; gap: 3vh; align-items: center; }
+  .pochette { width: 26vh; height: 26vh; border-radius: 1.6vh; object-fit: cover; flex: none;
+    box-shadow: 0 1.5vh 4vh rgba(0, 0, 0, .55); animation: apparait .6s ease-out; }
+  .rapide { margin-top: 1.6vh; font: 700 2.6vh Bahnschrift, sans-serif; color: #ffe08a; }
+  .grosseAnnee { font: 900 12vh Bahnschrift, sans-serif; line-height: 1; text-shadow: 0 0 3vh rgba(70, 210, 255, .6); }
+  .proches { list-style: none; padding: 0; margin: 2vh 0 0; font-size: 2.6vh; }
+  .proches li { padding: .6vh 0; } .proches b { color: var(--cyan); }
+  .classement li { transition: transform .9s cubic-bezier(.2, .8, .2, 1); }
+  .evol { font: 700 1.9vh Bahnschrift, sans-serif; min-width: 5vh; }
+  .evol.monte { color: var(--d); } .evol.descend { color: var(--a); }
+  .flamme { font-size: 2vh; color: #ffb35c; margin-left: .6vh; }
+  .pastille { display: inline-block; width: 1.4vh; height: 1.4vh; border-radius: 50%; margin-right: .8vh; vertical-align: middle; }
+  .equipesBloc { display: flex; gap: 1vh; flex-wrap: wrap; margin: 1vh 0 2vh; }
+  .equipesBloc .eq { flex: 1 1 14vh; border-radius: 1.2vh; padding: 1vh 1.4vh; background: rgba(5, 6, 26, .6);
+    border: .3vh solid; font-size: 2.3vh; }
+  .equipesBloc .eq b { display: block; font: 900 3vh Bahnschrift, sans-serif; }
+  .pseudo { border-width: .3vh; }
+  /* fin de partie */
+  .marche { opacity: 0; transform: translateY(6vh); transition: opacity .8s, transform .8s; }
+  .marche.visible { opacity: 1; transform: none; }
+  #statsFin { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 1.5vh; width: min(92vw, 160vh);
+    margin-top: 2vh; opacity: 0; transition: opacity 1s; }
+  #statsFin.visible { opacity: 1; }
+  #statsFin div { background: rgba(5, 6, 26, .65); border: 1px solid rgba(70, 210, 255, .3); border-radius: 1.4vh;
+    padding: 1.4vh; font-size: 1.9vh; text-align: left; }
+  #statsFin b { display: block; color: var(--cyan); font: 700 1.6vh Bahnschrift, sans-serif; letter-spacing: .08em;
+    text-transform: uppercase; margin-bottom: .6vh; }
+  #fin { overflow-y: auto; justify-content: flex-start; padding-top: 2vh; }
+  .confetti { position: fixed; top: -3vh; width: 1.2vh; height: 1.8vh; z-index: 5; pointer-events: none;
+    animation: tombe linear forwards; }
+  @keyframes tombe { to { transform: translateY(110vh) rotate(720deg); } }
+  #activerSon { position: fixed; left: 50%; bottom: 3vh; transform: translateX(-50%); z-index: 9; cursor: pointer;
+    font: 800 2.6vh "Segoe UI", sans-serif; color: #1b1300; background: linear-gradient(90deg, #f2b632, #ffe08a);
+    border: 0; border-radius: 99px; padding: 1.6vh 3vw; box-shadow: 0 0 4vh rgba(242, 182, 50, .6);
+    animation: battre 1.2s ease-in-out infinite; }
+  #perdu { position: fixed; inset: 0 0 auto 0; z-index: 9; background: #7a1f3a; color: #fff; text-align: center;
+    font: 700 2.6vh "Segoe UI", sans-serif; padding: 1.6vh 2vw; box-shadow: 0 1vh 3vh rgba(0, 0, 0, .5); }
+  #petitQr { position: fixed; right: 2vw; bottom: 2vh; background: #fff; padding: .8vh; border-radius: 1vh; opacity: .9; }
+  #petitQr img, #petitQr canvas { width: 11vh !important; height: 11vh !important; display: block; }
+  #petitQr span { display: block; color: #05061a; font: 700 1.3vh Bahnschrift, sans-serif; text-align: center; margin-top: .4vh; }
+</style>
+</head>
+<body>
+<main>
+  <section id="attente">
+    <div id="qr"></div>
+    <div>
+      <div class="etiquette">Blind test</div>
+      <h1 style="font-size:7vh">Rejoignez la partie !</h1>
+      <div id="url"></div>
+      <div class="etiquette">Code de la partie</div>
+      <div id="code"></div>
+      <div class="etiquette">Joueurs (<span id="nbInscrits">0</span>)</div>
+      <div id="inscrits"></div>
+      <button class="action" id="lancer" disabled>Lancer la partie</button>
+      <div class="aide" id="aideAttente">Scannez le QR code avec l'appareil photo du téléphone, ou tapez l'adresse puis le code. Barre d'espace : suivant. Cliquez sur un pseudo pour retirer ce joueur.</div>
+    </div>
+  </section>
+
+  <section id="question" hidden>
+    <div class="entete">
+      <div class="etiquette">Question <span id="numero"></span> / <span id="total"></span><span id="modeNom"></span></div>
+      <div class="commandes">
+        <span id="compteurVotes"></span>
+        <button id="reecouter" type="button" title="Reprendre l'extrait au début (touche R)">↻ Réécouter</button>
+        <button id="pause" type="button" title="Arrêter le chrono et la musique (touche P)">⏸ Pause</button>
+        <button id="reveler" type="button" title="Afficher la réponse maintenant (barre d'espace)">Révéler</button>
+      </div>
+    </div>
+    <div id="bandeauPause" hidden>PAUSE</div>
+    <div id="bandeauDouble" hidden>×2 POINTS</div>
+    <div class="centre">
+      <div id="anneau">
+        <svg viewBox="0 0 120 120"><circle class="fondAnneau" cx="60" cy="60" r="52" fill="none" stroke-width="8"/>
+          <circle class="arc" cx="60" cy="60" r="52" fill="none" stroke-width="8" stroke-linecap="round"
+                  stroke-dasharray="326.7" stroke-dashoffset="0"/></svg>
+        <div id="chiffre"></div>
+      </div>
+    </div>
+    <div id="consigne"></div>
+    <div id="annee" hidden>📅 Répondez sur votre téléphone</div>
+    <div class="choix" id="choix"></div>
+  </section>
+
+  <section id="resultats" hidden>
+    <div>
+      <div class="etiquette">Réponse <span id="numeroR"></span></div>
+      <div id="bonneReponse"></div>
+      <div class="choix revele" id="choixR" style="margin-top:3vh"></div>
+    </div>
+    <div>
+      <div id="equipesR"></div>
+      <div class="etiquette">Classement</div>
+      <ol class="classement" id="classement"></ol>
+      <div class="pied"><button class="action" id="suivant">Question suivante</button></div>
+    </div>
+  </section>
+
+  <section id="fin" hidden>
+    <div class="etiquette">Partie terminée</div>
+    <h1 style="font-size:8vh">Merci d'avoir joué !</h1>
+    <div id="equipesFin" style="width:min(92vw,160vh)"></div>
+    <div id="podium"></div>
+    <div id="statsFin"></div>
+    <ol class="classement" id="classementFinal" style="width:min(60vw,90vh);margin-top:2vh"></ol>
+    <button class="action" id="rejouer" type="button" style="margin-top:2vh">Rejouer ce blind test (mêmes joueurs)</button>
+  </section>
+</main>
+<button id="activerSon" type="button" hidden>🔊 Cliquez ici une fois pour activer le son de l'écran</button>
+<div id="perdu" hidden>Connexion au programme perdue. La fenêtre noire « Blind test » est-elle toujours ouverte ? Reconnexion…</div>
+<button id="pleinEcran" type="button" title="Plein écran (touche F)">⛶ Plein écran</button>
+<div id="petitQr" hidden><div id="petitQrCode"></div><span>Rejoindre</span></div>
+<audio id="son" preload="auto"></audio>
+
+<script>
+const cle = new URLSearchParams(location.search).get("cle");
+const $ = (id) => document.getElementById(id);
+const LETTRES = ["A", "B", "C", "D"];
+let etat = null, fin = 0, questionJouee = null, qrCible = null, enPause = false, resultatsVus = null, finVue = false;
+const COULEURS_EQ = ["#e5486b", "#3f8cff", "#f2b632", "#2fbf71"];
+const AIDE = $("aideAttente").textContent;
+
+function echapper(t) { const d = document.createElement("div"); d.textContent = t === null || t === undefined ? "" : t; return d.innerHTML.replace(/"/g, "&quot;").replace(/'/g, "&#39;"); }
+function afficherSection(nom) {
+  for (const s of ["attente", "question", "resultats", "fin"]) $(s).hidden = s !== nom;
+  $("petitQr").hidden = nom !== "resultats";          // pendant les questions, il cacherait la carte D
+}
+async function action(nom, corps) {
+  await fetch(`/hote/${nom}?cle=${encodeURIComponent(cle)}`, { method: "POST",
+    headers: { "Content-Type": "application/json" }, body: JSON.stringify(corps || {}) });
+}
+
+function cartes(el, choix, comptes, bonne, forme) {
+  const qui = forme === "meme_titre";                  // « Qui chante ? » : l'artiste en gros
+  el.innerHTML = choix.map((c, i) => `
+    <div class="carte c${i}${i === bonne ? " bonne" : ""}">
+      <span class="lettre">${LETTRES[i]}</span>
+      <span><span class="titre">${echapper(qui ? c.artiste : c.titre)}</span><span class="artiste">${echapper(qui ? c.titre : c.artiste)}</span></span>
+      ${comptes ? `<span class="barre">${comptes[i]} vote${comptes[i] > 1 ? "s" : ""}</span>` : ""}
+    </div>`).join("");
+}
+function pastille(j) {
+  return j.equipe !== null && j.equipe !== undefined ? `<span class="pastille" style="background:${COULEURS_EQ[j.equipe]}"></span>` : "";
+}
+function classement(el, liste, max, gains, anime) {
+  el.innerHTML = liste.slice(0, max).map((j, i) => {
+    const ev = gains && j.evolution ? `<span class="evol ${j.evolution > 0 ? "monte" : "descend"}">${j.evolution > 0 ? "▲" : "▼"} ${Math.abs(j.evolution)}</span>` : `<span class="evol"></span>`;
+    return `<li data-evol="${anime ? j.evolution || 0 : 0}" style="grid-template-columns:5vh 1fr 6vh auto auto"><span class="rang">${i + 1}</span>
+      <span>${pastille(j)}${echapper(j.pseudo)}${j.serie >= 2 ? `<span class="flamme">🔥${j.serie}</span>` : ""}</span>${ev}
+      <span class="gain">${gains && j.gain ? "+" + j.gain : ""}</span>
+      <span class="score">${j.score.toLocaleString("fr-FR")}</span></li>`; }).join("");
+  if (!anime) return;
+  // classement animé : chacun part de sa place d'avant (évolution) et glisse jusqu'à la nouvelle
+  const lignes = [...el.children], h = lignes[0] ? lignes[0].getBoundingClientRect().height + 8 : 0;
+  for (const li of lignes) { li.style.transition = "none"; li.style.transform = `translateY(${(+li.dataset.evol) * h}px)`; }
+  el.offsetHeight;
+  setTimeout(() => { for (const li of lignes) { li.style.transition = ""; li.style.transform = ""; } }, 700);
+}
+function equipes(el, liste, gains) {
+  el.innerHTML = liste ? `<div class="equipesBloc">${liste.map((x, i) => `<div class="eq" style="border-color:${x.couleur}">
+    ${i + 1}. ${echapper(x.nom)} <small>(${x.membres})</small><b>${x.score.toLocaleString("fr-FR")}</b>${gains && x.gain ? `<small>+${x.gain}</small>` : ""}</div>`).join("")}</div>` : "";
+}
+function confettis() {
+  for (let i = 0; i < 90; i++) {
+    const c = document.createElement("div");
+    c.className = "confetti";
+    c.style.left = Math.random() * 100 + "vw";
+    c.style.background = [...COULEURS_EQ, "#c7a2ff", "#46d2ff"][i % 6];
+    c.style.animationDuration = 2.5 + Math.random() * 2.5 + "s";
+    c.style.animationDelay = Math.random() * 1.2 + "s";
+    document.body.appendChild(c);
+    setTimeout(() => c.remove(), 6000);
+  }
+}
+function qr(el, texte, taille) {
+  el.innerHTML = "";
+  if (typeof QRCode === "undefined") { el.textContent = "(QR code indisponible sans Internet)"; return; }
+  new QRCode(el, { text: texte, width: taille, height: taille, correctLevel: QRCode.CorrectLevel.M });
+}
+
+function fondu(audio) {
+  const depart = audio.volume, t0 = performance.now(), source = audio.src;
+  const pas = () => {
+    if (audio.src !== source) return;                   // question suivante déjà lancée : ne pas couper son extrait
+    const k = Math.min(1, (performance.now() - t0) / 900); audio.volume = depart * (1 - k);
+    if (k < 1) requestAnimationFrame(pas); else { audio.pause(); audio.volume = 1; } };
+  requestAnimationFrame(pas);
+}
+
+function dessinerQr() {                                // QR code = adresse + code : scanner suffit pour jouer
+  if (!window.URL_JOUEUR || !window.CODE) return;
+  const cible = `${window.URL_JOUEUR}?code=${window.CODE}`;
+  if (cible === qrCible) return;                       // redessiné seulement si l'adresse change (Wi-Fi / Internet)
+  qrCible = cible;
+  $("url").textContent = window.URL_JOUEUR;
+  qr($("qr"), cible, 400); qr($("petitQrCode"), cible, 160);
+}
+
+function rendre(e) {
+  if (e.phase === "remplacee") return;                  // ancienne partie : la nouvelle arrive juste après
+  etat = e;
+  if (e.code && e.code !== window.CODE) {
+    window.CODE = e.code;
+    $("code").textContent = e.code.replace(/(\d{3})(\d{3})/, "$1 $2");
+  }
+  if (e.url_joueur) window.URL_JOUEUR = e.url_joueur;
+  dessinerQr();
+  if (e.phase === "aucune") {                         // l'atelier n'a pas encore lancé de partie
+    afficherSection("attente");
+    $("qr").style.visibility = "hidden";
+    $("lancer").disabled = true;
+    $("inscrits").innerHTML = "";
+    $("aideAttente").textContent = "Aucune partie lancée : choisissez un blind test dans l'atelier, bouton « Jouer ».";
+  } else if (e.phase === "attente") {
+    afficherSection("attente");
+    questionJouee = null;                             // nouvelle partie : la question 1 sera bien jouée
+    if (!$("son").paused) fondu($("son"));
+    $("qr").style.visibility = "";
+    $("aideAttente").textContent = AIDE;
+    $("nbInscrits").textContent = e.nb_joueurs;
+    $("inscrits").innerHTML = e.classement.map((j) =>
+      `<button class="pseudo" data-jeton="${echapper(j.jeton)}" title="Retirer ce joueur"${j.equipe !== null && j.equipe !== undefined ? ` style="border-color:${COULEURS_EQ[j.equipe]}"` : ""}>${pastille(j)}${j.pseudo === e.animateur ? "👑 " : ""}${echapper(j.pseudo)}</button>`).join("")
+      + (e.equipes ? `<div style="width:100%;margin-top:1vh">${e.equipes.map((x) => `<span class="pseudo" style="border-color:${x.couleur};cursor:default">${echapper(x.nom)} : ${x.membres}</span>`).join(" ")}</div>` : "");
+    resultatsVus = null; finVue = false;
+    for (const b of $("inscrits").querySelectorAll("button"))
+      b.onclick = () => { if (confirm(`Retirer ${b.textContent} de la partie ?`)) action("retirer", { jeton: b.dataset.jeton }); };
+    $("lancer").disabled = e.nb_joueurs === 0;
+    $("lancer").textContent = e.numero > 0 ? `Reprendre à la question ${e.numero + 1}` : "Lancer la partie";
+  } else if (e.phase === "question") {
+    afficherSection("question");
+    $("numero").textContent = e.numero; $("total").textContent = e.total;
+    $("modeNom").textContent = e.mode !== "classique" ? ` · ${e.nom_mode}` : "";
+    $("consigne").textContent = e.consigne || "";
+    $("bandeauDouble").hidden = !e.double;
+    $("annee").hidden = e.type !== "annee";
+    $("choix").hidden = e.type === "annee";
+    $("compteurVotes").textContent = `${e.nb_votes} / ${e.nb_joueurs} réponse${e.nb_votes > 1 ? "s" : ""}`;
+    fin = performance.now() + e.reste_ms;            // recalé à chaque mise à jour (pause comprise)
+    $("pause").textContent = e.pause ? "▶ Reprendre" : "⏸ Pause";
+    $("bandeauPause").hidden = !e.pause;
+    $("question").classList.toggle("enpause", !!e.pause);
+    if (questionJouee !== `${e.manche}-${e.numero}`) {   // nouvelle question : cartes, chrono et extrait
+      questionJouee = `${e.manche}-${e.numero}`;
+      if (e.choix) cartes($("choix"), e.choix, null, -1, e.forme);
+      if (e.lettres) $("choix").querySelectorAll(".titre, .artiste").forEach((x) => { x.dataset.plein = x.textContent; x.textContent = masquer(x.textContent, 0); });
+      const son = $("son"); son.src = `/audio/${e.audio}?cle=${encodeURIComponent(cle)}`;
+      son.currentTime = 0; son.volume = 1; son.play().catch(() => { $("activerSon").hidden = false; });
+    }
+    const son = $("son");
+    if (e.pause && !son.paused) son.pause();
+    else if (!e.pause && enPause && son.paused && !son.ended) son.play().catch(() => {});
+    enPause = !!e.pause;
+  } else if (e.phase === "resultats") {
+    afficherSection("resultats");
+    // devinette de 25 s ou moins : l'extrait continue pendant la réponse jusqu'à sa fin ; au-delà : fondu
+    if (!$("son").paused && e.duree > 25) fondu($("son"));
+    $("numeroR").textContent = `${e.numero} / ${e.total}`;
+    const image = e.pochette ? `<img class="pochette" src="${echapper(e.pochette)}" alt="">` : "";
+    let texte;
+    if (e.type === "annee") {
+      texte = `<div class="grosseAnnee">${e.annee}</div><div class="artiste">${echapper(e.chanson || "")}</div>`;
+    } else {
+      const b = e.choix[e.bonne];
+      texte = `<h1>${echapper(b.titre)}</h1><div class="artiste">${echapper(b.artiste)}</div>`
+        + (e.info ? `<div class="info">${echapper(e.info)}</div>` : "");
+    }
+    const rapide = e.rapide ? `<div class="rapide">⚡ Le plus rapide : ${echapper(e.rapide.pseudo)} (${String(e.rapide.temps).replace(".", ",")} s)</div>` : "";
+    $("bonneReponse").innerHTML = `<div class="reponseHaut">${image}<div>${texte}${rapide}</div></div>`;
+    if (e.type === "annee") {
+      $("choixR").innerHTML = `<ul class="proches">${(e.proches || []).map((x) => `<li><b>${echapper(x.pseudo)}</b> : ${x.annee} ${x.ecart === 0 ? "🎯 pile !" : `(${x.ecart} an${x.ecart > 1 ? "s" : ""} d'écart)`}</li>`).join("") || "<li>Personne n'a répondu.</li>"}</ul>`;
+    } else cartes($("choixR"), e.choix, e.comptes, e.bonne, e.forme);
+    const nouveau = resultatsVus !== `${e.manche}-${e.numero}`;   // animation une seule fois par question
+    resultatsVus = `${e.manche}-${e.numero}`;
+    equipes($("equipesR"), e.equipes, true);
+    classement($("classement"), e.classement, 8, true, nouveau);
+    $("suivant").textContent = e.numero < e.total ? "Question suivante" : "Voir le podium";
+  } else if (e.phase === "fin") {
+    afficherSection("fin");
+    if (finVue === e.manche) return;                      // la mise en scène ne se joue qu'une fois
+    finVue = e.manche;
+    if (!$("son").paused) fondu($("son"));
+    const p = e.classement, ordre = [1, 0, 2], hauteurs = ["30vh", "38vh", "22vh"];
+    $("podium").innerHTML = ordre.filter((i) => p[i]).map((i) => `
+      <div class="marche" data-place="${i + 1}" style="height:${hauteurs[ordre.indexOf(i)]}">
+        <span class="place">${i + 1}</span><span class="nom">${pastille(p[i])}${echapper(p[i].pseudo)}</span>
+        <span class="pts">${p[i].score.toLocaleString("fr-FR")} pts</span></div>`).join("");
+    equipes($("equipesFin"), e.equipes, false);
+    if (e.equipes) $("equipesFin").insertAdjacentHTML("afterbegin", `<div class="etiquette">Équipe gagnante : ${echapper(e.equipes[0].nom)} 🏆</div>`);
+    const st = e.stats, pct = (x) => Math.round(x.taux * 100) + " %";
+    $("statsFin").innerHTML = st ? [
+      st.plus_trouvee && `<div><b>La plus trouvée</b>${echapper(st.plus_trouvee.chanson || st.plus_trouvee.reponse)} — ${pct(st.plus_trouvee)}</div>`,
+      st.plus_ratee && `<div><b>La plus ratée</b>${echapper(st.plus_ratee.chanson || st.plus_ratee.reponse)} — ${pct(st.plus_ratee)}</div>`,
+      st.plus_rapide && `<div><b>Le plus rapide</b>${echapper(st.plus_rapide.pseudo)} en ${String(st.plus_rapide.temps).replace(".", ",")} s</div>`,
+      st.meilleure_serie && `<div><b>Meilleure série</b>${echapper(st.meilleure_serie.pseudo)} : ${st.meilleure_serie.serie} 🔥</div>`,
+    ].filter(Boolean).join("") : "";
+    classement($("classementFinal"), p, 10, false, false);
+    $("statsFin").classList.remove("visible");
+    // podium à suspense : 3e, puis 2e, puis le vainqueur (confettis)
+    [3, 2, 1].forEach((place, k) => setTimeout(() => {
+      const m = $("podium").querySelector(`[data-place="${place}"]`);
+      if (m) m.classList.add("visible");
+      if (place === 1) { confettis(); setTimeout(() => $("statsFin").classList.add("visible"), 1500); }
+    }, 1200 + k * 1800));
+  }
+}
+
+let LETTRE;
+try { LETTRE = new RegExp("[\\p{L}\\p{N}]", "u"); } catch (e) { LETTRE = /[0-9A-Za-z\u00C0-\u024F]/; }
+// mode « lettre par lettre » : les lettres pas encore révélées deviennent des _ (espaces et ponctuation gardés)
+function masquer(texte, f) {
+  const lettre = LETTRE, car = [...(texte || "")];
+  let n = Math.floor(car.filter((c) => lettre.test(c)).length * Math.min(1, Math.max(0, f)));
+  return car.map((c) => (!lettre.test(c) ? c : n-- > 0 ? c : "_")).join("");
+}
+
+function tic() {                                        // anneau et chiffre du compte à rebours
+  if (etat && etat.phase === "question") {
+    const reste = etat.pause ? etat.reste_ms : Math.max(0, fin - performance.now()), k = reste / (etat.duree * 1000);
+    if (etat.lettres) {                                   // lettre par lettre
+      const f = (etat.duree - reste / 1000) / etat.lettres;
+      $("choix").querySelectorAll("[data-plein]").forEach((x) => {
+        const t = masquer(x.dataset.plein, f);
+        if (x.textContent !== t) x.textContent = t;
+      });
+    }
+    document.querySelector("#anneau .arc").style.strokeDashoffset = 326.7 * (1 - k);
+    $("chiffre").textContent = Math.ceil(reste / 1000);
+    $("anneau").classList.toggle("urgent", reste < 3000);
+  }
+  requestAnimationFrame(tic);
+}
+
+// le son ne peut démarrer qu'après un clic sur cette page (règle des navigateurs) : si la partie est lancée depuis
+// le téléphone de l'animateur, on le demande ici une fois
+let sonDebloque = false;
+function debloquerSon() {
+  if (sonDebloque) return;
+  const s = $("son");
+  const reprendre = etat && etat.phase === "question" && !etat.pause, jouait = !s.paused;
+  if (!s.src) s.src = "data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQAAAAA=";
+  s.play().then(() => {
+    sonDebloque = true; $("activerSon").hidden = true;
+    if (!reprendre && !jouait) s.pause();             // hors question : on débloque sans rien faire entendre
+  }).catch(() => {});
+}
+document.addEventListener("click", debloquerSon, true);
+document.addEventListener("keydown", debloquerSon, true);
+// on essaie d'abord sans clic (certains navigateurs l'autorisent) ; sinon, on demande un clic
+setTimeout(() => {
+  if (sonDebloque) return;
+  const s = $("son");
+  if (s.src) { if (!s.paused) { sonDebloque = true; return; } }
+  else s.src = "data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQAAAAA=";
+  s.play().then(() => { sonDebloque = true; if (s.src.startsWith("data:")) s.pause(); })
+    .catch(() => { $("activerSon").hidden = false; });
+}, 1000);
+$("activerSon").onclick = debloquerSon;
+
+$("lancer").onclick = () => { $("son").play().catch(() => {}); action("suivant"); };
+$("suivant").onclick = () => action("suivant");
+$("pause").onclick = () => action("pause");
+$("reveler").onclick = () => action("reveler");
+$("reecouter").onclick = () => { const s = $("son"); s.currentTime = 0; s.volume = 1; if (!(etat && etat.pause)) s.play().catch(() => {}); };
+$("rejouer").onclick = () => { if (confirm("Rejouer ce blind test avec les mêmes joueurs ? Les scores repartent à zéro.")) action("rejouer"); };
+function basculerPleinEcran() {
+  if (document.fullscreenElement) document.exitFullscreen().catch(() => {});
+  else document.documentElement.requestFullscreen().catch(() => {});
+}
+$("pleinEcran").onclick = basculerPleinEcran;
+document.addEventListener("fullscreenchange", () => { $("pleinEcran").textContent = document.fullscreenElement ? "Quitter le plein écran" : "⛶ Plein écran"; });
+document.addEventListener("keydown", (ev) => {
+  if (ev.target.closest && ev.target.closest("button") && (ev.code === "Space" || ev.code === "Enter")) return;
+  if (ev.code === "KeyF") return basculerPleinEcran();
+  if (etat && etat.phase === "question" && ev.code === "KeyP") return action("pause");
+  if (etat && etat.phase === "question" && ev.code === "KeyR") return $("reecouter").click();
+  if (ev.code === "Space" || ev.code === "Enter") { ev.preventDefault();
+    if (etat && etat.phase !== "aucune" && (etat.phase !== "attente" || etat.nb_joueurs > 0)) action(etat.phase === "question" ? "reveler" : "suivant"); }
+});
+
+fetch("/infos").then((r) => r.json()).then((i) => {
+  window.URL_JOUEUR = window.URL_JOUEUR || i.url_joueur;
+  dessinerQr();
+});
+// mises à jour : le serveur répond dès que la partie change (attente longue)
+let version = -1, echecs = 0;
+async function boucle() {
+  try {
+    const r = await fetch(`/etat?cle=${encodeURIComponent(cle)}&version=${version}`, { cache: "no-store" });
+    const e = await r.json();
+    echecs = 0; $("perdu").hidden = true;
+    version = e.version;
+    rendre(e);
+    boucle();
+  } catch {
+    // programme arrêté ou injoignable : on le dit au lieu de rester figé
+    if (++echecs >= 3) $("perdu").hidden = false;
+    setTimeout(boucle, 1000);
+  }
+}
+boucle();
+requestAnimationFrame(tic);
+</script>
+</body>
+</html>
