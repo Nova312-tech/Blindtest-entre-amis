@@ -21,6 +21,7 @@ import random
 import re
 import secrets
 import shutil
+import signal
 import socket
 import subprocess
 import sys
@@ -1526,7 +1527,18 @@ FICHIERS_LISIBLES = ("reponses.txt", "problemes.txt", "propositions_a_verifier.t
 
 
 def corbeille(chemin):
-    """Envoie un dossier à la corbeille de Windows (récupérable), au lieu de l'effacer."""
+    """Envoie un dossier à la corbeille (récupérable), au lieu de l'effacer."""
+    if os.name != "nt":                                  # Mac : la Corbeille du Finder est ~/.Trash
+        poubelle = Path.home() / ".Trash"
+        cible, n = poubelle / Path(chemin).name, 2
+        while cible.exists():
+            cible, n = poubelle / f"{Path(chemin).name} {n}", n + 1
+        try:
+            poubelle.mkdir(exist_ok=True)
+            shutil.move(str(chemin), str(cible))
+        except OSError:
+            raise bt.Erreur(f"Impossible de mettre {Path(chemin).name} à la corbeille (fichier ouvert ailleurs ?).")
+        return
     import ctypes
     from ctypes import wintypes
 
@@ -1644,6 +1656,13 @@ class Application:
                 # remet à zéro le compte à rebours de mise en veille (et d'extinction de l'écran) de Windows
                 import ctypes
                 ctypes.windll.kernel32.SetThreadExecutionState(0x00000001 | 0x00000002)
+            elif sys.platform == "darwin" and tours % 15 == 0 and self.occupe():
+                # le Mac ne se met pas en veille et garde l'écran allumé pendant 40 s (renouvelé toutes les 30 s)
+                try:
+                    subprocess.Popen(["caffeinate", "-d", "-i", "-t", "40"], stdout=subprocess.DEVNULL,
+                                     stderr=subprocess.DEVNULL)
+                except OSError:
+                    pass
             if self.tunnel and self.tunnel.poll() is not None:
                 self.tunnel = None
                 if self.url_joueur != self.url_locale:
@@ -2305,8 +2324,8 @@ def fabriquer_gestionnaire(app):
                         app.oublier_reprise()
                     elif u.path == "/atelier/annuler":
                         app.fabrication.annuler()
-                    elif u.path == "/atelier/ouvrir":       # le dossier du lot dans l'Explorateur Windows
-                        os.startfile(trouver_lot(str(corps.get("lot") or "")))
+                    elif u.path == "/atelier/ouvrir":       # le dossier du lot (Explorateur, Finder)
+                        ouvrir_dossier(trouver_lot(str(corps.get("lot") or "")))
                     elif u.path == "/atelier/quitter":
                         self._json({"ok": True})
                         threading.Timer(0.5, app.arret.set).start()
@@ -2363,27 +2382,30 @@ def fabriquer_gestionnaire(app):
     return Gestionnaire
 
 
+def ouvrir_dossier(chemin):
+    if os.name == "nt":
+        os.startfile(chemin)
+    else:
+        subprocess.Popen(["open" if sys.platform == "darwin" else "xdg-open", str(chemin)])
+
+
 def trouver_cloudflared():
-    chemin = shutil.which("cloudflared")
-    if chemin:
-        return chemin
-    candidats = [Path(os.environ.get("ProgramFiles(x86)", "")) / "cloudflared" / "cloudflared.exe",
-                 Path(os.environ.get("ProgramFiles", "")) / "cloudflared" / "cloudflared.exe",
-                 bt.BASE / "cloudflared.exe"]
-    candidats += list((Path(os.environ.get("LOCALAPPDATA", "")) / "Microsoft" / "WinGet" / "Packages")
-                      .glob("Cloudflare.cloudflared*/**/cloudflared*.exe"))
-    return next((str(c) for c in candidats if c.is_file()), None)
+    candidats = []
+    if os.name == "nt":
+        candidats = [Path(os.environ.get("ProgramFiles(x86)", "")) / "cloudflared" / "cloudflared.exe",
+                     Path(os.environ.get("ProgramFiles", "")) / "cloudflared" / "cloudflared.exe"]
+        candidats += list((Path(os.environ.get("LOCALAPPDATA", "")) / "Microsoft" / "WinGet" / "Packages")
+                          .glob("Cloudflare.cloudflared*/**/cloudflared*.exe"))
+    return bt.chercher_programme("cloudflared", candidats)
 
 
 # ---------- Adresse publique fixe (Tailscale Funnel) ----------
 # Gratuit, même adresse à chaque soirée (https://<pc>.<réseau>.ts.net) : le QR code ne change plus.
 
 def trouver_tailscale():
-    chemin = shutil.which("tailscale")
-    if chemin:
-        return chemin
-    exe = Path(os.environ.get("ProgramFiles", r"C:\Program Files")) / "Tailscale" / "tailscale.exe"
-    return str(exe) if exe.is_file() else None
+    return bt.chercher_programme("tailscale", [
+        Path(os.environ.get("ProgramFiles", r"C:\Program Files")) / "Tailscale" / "tailscale.exe",
+        Path("/Applications/Tailscale.app/Contents/MacOS/Tailscale")])        # application Mac
 
 
 def tailscale(*args, delai=30):
@@ -2449,15 +2471,24 @@ def lancer_tunnel(port):
     Renvoie (processus, adresse). Le processus doit rester en vie pendant toute la partie."""
     exe = trouver_cloudflared()
     if not exe:
-        raise bt.Erreur("cloudflared est introuvable. Installez-le avec : winget install Cloudflare.cloudflared")
+        raise bt.Erreur("cloudflared est introuvable. Installez-le dans le Terminal avec : brew install cloudflared" if os.name != "nt" else
+                        "cloudflared est introuvable. Installez-le avec : winget install Cloudflare.cloudflared")
     afficher("Ouverture de l'accès Internet (tunnel Cloudflare)...")
     # fenêtre fermée d'un coup la fois précédente : le tunnel a pu rester ouvert, on le ferme
     fichier_pid = bt.BASE / "_tunnel.pid"
     if fichier_pid.exists():
         ancien = fichier_pid.read_text().strip()
         if ancien.isdigit():
-            subprocess.run(["taskkill", "/PID", ancien, "/F", "/FI", "IMAGENAME eq cloudflared*"],
-                           capture_output=True)
+            if os.name == "nt":
+                subprocess.run(["taskkill", "/PID", ancien, "/F", "/FI", "IMAGENAME eq cloudflared*"],
+                               capture_output=True)
+            else:                                        # Mac : seulement si ce numéro est bien un cloudflared
+                r = subprocess.run(["ps", "-p", ancien, "-o", "comm="], capture_output=True, text=True)
+                if "cloudflared" in r.stdout:
+                    try:
+                        os.kill(int(ancien), signal.SIGTERM)
+                    except OSError:
+                        pass
     proc = subprocess.Popen([exe, "tunnel", "--no-autoupdate", "--url", f"http://localhost:{port}"],
                             stdout=subprocess.DEVNULL, stderr=subprocess.PIPE, text=True,
                             encoding="utf-8", errors="replace",
@@ -2588,6 +2619,14 @@ def ouvrir_journal():
 def surveiller_fermeture(app):
     """Fenêtre noire fermée avec la croix : on le note dans le journal et on ferme proprement l'accès Internet."""
     if os.name != "nt":
+        def fermeture(signum, frame):
+            print("\nArrêt : " + "fenêtre fermée" + ".", flush=True)
+            try:
+                app.fermer()
+            finally:
+                os._exit(0)
+        for sig in (signal.SIGHUP, signal.SIGTERM):
+            signal.signal(sig, fermeture)
         return None
     import ctypes
 
@@ -2709,7 +2748,8 @@ def main():
             afficher("  Arrêter la partie : fermez cette fenêtre ou Ctrl+C")
             afficher("=" * 64)
             if not args.internet:
-                afficher("Si Windows demande l'autorisation du pare-feu : cochez « Réseaux privés » et autorisez.")
+                afficher("Si le Mac demande d'accepter les connexions entrantes pour Python : cliquez sur « Autoriser »." if os.name != "nt" else
+                         "Si Windows demande l'autorisation du pare-feu : cochez « Réseaux privés » et autorisez.")
             if not args.sans_navigateur:
                 webbrowser.open(app.url_ecran)
         else:
@@ -2720,7 +2760,8 @@ def main():
             afficher("  Laissez cette fenêtre ouverte (vous pouvez la réduire).")
             afficher("  Pour tout arrêter : bouton « Quitter » de la page, ou fermez cette fenêtre.")
             afficher("=" * 64)
-            afficher("Si Windows demande l'autorisation du pare-feu : cochez « Réseaux privés » et autorisez.")
+            afficher("Si le Mac demande d'accepter les connexions entrantes pour Python : cliquez sur « Autoriser »." if os.name != "nt" else
+                     "Si Windows demande l'autorisation du pare-feu : cochez « Réseaux privés » et autorisez.")
             if not args.sans_navigateur:
                 webbrowser.open(app.url_atelier)
         while not app.arret.wait(1):

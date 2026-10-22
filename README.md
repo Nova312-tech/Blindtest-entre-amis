@@ -29,7 +29,9 @@ propre liste de chansons : le programme prépare tout seul les extraits et les q
 
 ## 1. Installer (5 minutes, une seule fois)
 
-Il faut un **PC sous Windows 10 ou 11** relié à Internet.
+Il faut un **PC sous Windows 10 ou 11** ou un **Mac**, relié à Internet.
+
+### Sur Windows
 
 1. **Téléchargez** le programme : en haut de cette page, bouton vert **« Code »** puis **« Download ZIP »**
    (ou la dernière version dans **« Releases »**, à droite).
@@ -41,10 +43,24 @@ Il faut un **PC sous Windows 10 ou 11** relié à Internet.
 > Windows peut afficher « Windows a protégé votre ordinateur » : cliquez sur **« Informations complémentaires »**
 > puis **« Exécuter quand même »**. C'est normal pour un programme téléchargé qui n'est pas vendu en magasin.
 
-Ensuite, il suffit de **double-cliquer sur « Blind test »** sur le bureau. Une fenêtre noire s'ouvre
+### Sur Mac
+
+1. **Téléchargez** le programme (bouton vert **« Code »** puis **« Download ZIP »**, ou **« Releases »**) ;
+   le Mac le décompresse tout seul (sinon, double-cliquez sur le ZIP).
+2. Dans le dossier obtenu, faites un **clic droit sur `Installer (Mac).command` → « Ouvrir »**, puis confirmez
+   **« Ouvrir »**. Si le Mac refuse : **Réglages Système → Confidentialité et sécurité**, tout en bas,
+   **« Ouvrir quand même »**. C'est normal pour un programme qui ne vient pas de l'App Store.
+3. Il installe ce qui manque (Homebrew, Python et ffmpeg : le mot de passe du Mac est demandé, rien ne
+   s'affiche pendant la frappe) et crée un raccourci **« Blind test »** sur le bureau. Comptez 5 à 15 minutes.
+
+> Si le Mac demande d'**accepter les connexions entrantes** pour Python : cliquez sur **« Autoriser »**.
+
+### Ensuite
+
+Il suffit de **double-cliquer sur « Blind test »** sur le bureau. Une fenêtre s'ouvre
 (laissez-la ouverte, vous pouvez la réduire) et la page de l'**atelier** s'affiche dans votre navigateur.
 
-> **Au premier lancement**, Windows demande l'autorisation du pare-feu : cochez **« Réseaux privés »**
+> **Au premier lancement sur Windows**, Windows demande l'autorisation du pare-feu : cochez **« Réseaux privés »**
 > (et « Réseaux publics » si votre box est en réseau public) puis **« Autoriser »**. Sans cela, les téléphones
 > ne pourront pas se connecter.
 
@@ -130,7 +146,8 @@ une autre maison, choisissez **« Internet »** dans la fenêtre « Jouer ». Il
 programmes gratuits (à installer une fois) :
 
 - **Cloudflare** (le plus simple) : ouvrez « Invite de commandes » et tapez
-  `winget install Cloudflare.cloudflared`. L'adresse change à chaque partie.
+  `winget install Cloudflare.cloudflared`
+  (sur Mac, dans le Terminal : `brew install cloudflared`). L'adresse change à chaque partie.
 - **Tailscale** (adresse fixe d'une soirée à l'autre) : installez Tailscale, créez un compte gratuit et
   activez « Funnel ». Le blind test l'utilise automatiquement s'il est connecté.
 
@@ -142,8 +159,9 @@ programmes gratuits (à installer une fois) :
 |---|---|
 | Les téléphones ne trouvent pas la partie | Ils doivent être sur le **même Wi-Fi** que le PC (pas le Wi-Fi « invité » de la box, qui isole les appareils). Vérifiez l'autorisation du pare-feu (voir l'installation), ou choisissez le mode **Internet**. |
 | Pas de son sur l'écran | Cliquez une fois n'importe où sur la page de l'écran de jeu. Vérifiez le volume du PC / de la télé. |
-| « Python est introuvable » | Relancez `Installer.bat`, ou redémarrez le PC après l'installation. |
-| « Introuvable : ffmpeg » | Relancez `Installer.bat`, ou copiez `ffmpeg.exe` et `ffprobe.exe` dans le dossier du blind test. |
+| « Python est introuvable » | Relancez `Installer.bat` (ou `Installer (Mac).command`), ou redémarrez l'ordinateur après l'installation. |
+| Mac : « impossible d'ouvrir … développeur non identifié » | Clic droit sur le fichier → « Ouvrir », ou Réglages Système → Confidentialité et sécurité → « Ouvrir quand même ». |
+| « Introuvable : ffmpeg » | Relancez `Installer.bat` (Mac : `Installer (Mac).command`), ou copiez `ffmpeg.exe` et `ffprobe.exe` dans le dossier du blind test. |
 | Une chanson manque ou une réponse est fausse | Éditeur de réponses (bouton « Réponses »). |
 | Le programme s'est arrêté | Ouvrez `journal.txt` dans le dossier : la dernière ligne indique ce qui s'est passé. Joignez-le si vous signalez un problème. |
 
@@ -153,8 +171,8 @@ Pour signaler un problème ou proposer une idée : onglet **« Issues »** de ce
 
 ## 8. Bon à savoir
 
-- **Windows uniquement** pour l'ordinateur qui anime (les téléphones peuvent être des iPhone ou des Android,
-  même anciens).
+- **Windows 10 / 11 ou Mac** pour l'ordinateur qui anime (les téléphones peuvent être des iPhone ou des Android,
+  même anciens). La version Mac est récente : n'hésitez pas à signaler tout souci (onglet « Issues »).
 - **Usage privé** : le programme utilise les extraits de 30 secondes que Deezer met librement à disposition,
   pour jouer entre amis. Les playlists Spotify sont lues par une méthode non officielle qui peut cesser de
   fonctionner. Si vous publiez une vidéo sur YouTube, les droits des chansons restent à votre charge
@@ -172,6 +190,7 @@ Pour signaler un problème ou proposer une idée : onglet **« Issues »** de ce
 | `blindtest.py` | la fabrication : recherche des chansons, découpe des extraits, vidéo |
 | `donnees_quiz.py` | les langues, pays et œuvres utilisés comme fausses propositions |
 | `jeu/*.html` | les pages : atelier, écran de jeu, téléphone |
+| `*.bat` / `*.command` | installation et lancement sur Windows / sur Mac |
 
 En ligne de commande : `python blindtest.py --help` et `python jeu.py --help`. Aucune bibliothèque Python à
 installer (Python 3.9 ou plus récent, et ffmpeg).

@@ -1103,18 +1103,38 @@ def source_spotify(lien, nombre, bloques, args, notes):
 
 # ---------- Traitement audio ----------
 
+WINDOWS = os.name == "nt"
+# Mac : Homebrew installe dans ces dossiers, absents du PATH quand le programme est lancé par double-clic
+DOSSIERS_HOMEBREW = [Path("/opt/homebrew/bin"), Path("/usr/local/bin")]
+
+
+def chercher_programme(nom, autres=()):
+    """Chemin d'un programme : à côté du script, dans le PATH, chez Homebrew (Mac), puis aux emplacements donnés."""
+    local = BASE / (nom + (".exe" if WINDOWS else ""))
+    if local.is_file():
+        return str(local)
+    chemin = shutil.which(nom)
+    if chemin:
+        return chemin
+    candidats = list(autres) + ([] if WINDOWS else [d / nom for d in DOSSIERS_HOMEBREW])
+    return next((str(c) for c in candidats if Path(c).is_file()), None)
+
+
 def verifier_outils():
     manquants = []
     winget = Path(os.environ.get("LOCALAPPDATA", "")) / "Microsoft" / "WinGet"
     for outil in ("ffmpeg", "ffprobe"):
-        local = BASE / (outil + ".exe")
-        chemin = str(local) if local.exists() else shutil.which(outil)
-        if not chemin:          # installé à l'instant par winget : Windows ne le « voit » qu'après redémarrage
-            trouve = [winget / "Links" / f"{outil}.exe"] + sorted(winget.glob(f"Packages/Gyan.FFmpeg*/**/bin/{outil}.exe"))
-            chemin = next((str(f) for f in trouve if f.is_file()), None)
+        # installé à l'instant par winget : Windows ne le « voit » dans le PATH qu'après redémarrage
+        autres = ([winget / "Links" / f"{outil}.exe"] + sorted(winget.glob(f"Packages/Gyan.FFmpeg*/**/bin/{outil}.exe"))
+                  if WINDOWS else [])
+        chemin = chercher_programme(outil, autres)
         if not chemin:
             manquants.append(outil)
         OUTILS[outil] = chemin
+    if manquants and not WINDOWS:
+        raise Erreur(f"Introuvable : {', '.join(manquants)}.\n"
+                     "Installez ffmpeg : relancez « Installer (Mac).command », ou tapez dans le Terminal : "
+                     "brew install ffmpeg")
     if manquants:
         raise Erreur(f"Introuvable : {', '.join(manquants)}.\n"
                      "Installez ffmpeg (par exemple : winget install Gyan.FFmpeg), fermez puis "
@@ -1562,7 +1582,15 @@ ENCODAGE = ["-c:v", "libx264", "-preset", "slow", "-crf", "17", "-x264-params", 
             "-profile:v", "high", "-pix_fmt", "yuv420p"]
 DUREE_REPONSE = 5
 CYAN, VIOLET, BLANC = "0x46D2FF", "0xC7A2FF", "0xFFFFFF"
-DOSSIER_POLICES = Path(os.environ.get("WINDIR", r"C:\Windows")) / "Fonts"
+if os.name == "nt":
+    DOSSIERS_POLICES = [Path(os.environ.get("WINDIR", r"C:\Windows")) / "Fonts"]
+else:                                     # Mac (puis Linux)
+    DOSSIERS_POLICES = [Path("/System/Library/Fonts/Supplemental"), Path("/System/Library/Fonts"),
+                        Path("/Library/Fonts"), Path.home() / "Library" / "Fonts",
+                        Path("/usr/share/fonts/truetype/dejavu")]
+# polices Windows absentes du Mac : la plus proche parmi celles livrées avec macOS
+POLICES_MAC = {"bahnschrift.ttf": "DIN Alternate Bold.ttf", "seguibl.ttf": "Arial Black.ttf",
+               "seguisb.ttf": "Arial Bold.ttf", "segoeui.ttf": "Arial.ttf", "segoeuil.ttf": "Arial.ttf"}
 EXT_IMAGES = (".png", ".jpg", ".jpeg", ".webp")
 
 
@@ -1577,10 +1605,12 @@ def pour_filtre(chemin):
 
 
 def police(nom):
-    for n in (nom, "arialbd.ttf", "arial.ttf"):
-        if (DOSSIER_POLICES / n).exists():
-            return pour_filtre(DOSSIER_POLICES / n)
-    raise Erreur("Aucune police trouvée dans " + str(DOSSIER_POLICES))
+    for n in (nom, POLICES_MAC.get(nom), "arialbd.ttf", "arial.ttf", "Arial Bold.ttf", "Arial.ttf",
+              "DejaVuSans-Bold.ttf"):
+        for d in DOSSIERS_POLICES:
+            if n and (d / n).exists():
+                return pour_filtre(d / n)
+    raise Erreur("Aucune police trouvée dans " + str(DOSSIERS_POLICES[0]))
 
 
 EXT_VIDEOS = (".mp4", ".mov", ".webm")

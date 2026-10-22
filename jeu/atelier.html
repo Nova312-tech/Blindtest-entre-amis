@@ -243,7 +243,7 @@
           <button class="bouton discret" id="fabriquer" type="button" style="flex:1 1 160px">Fabriquer directement</button>
         </div>
         <div class="erreurForm" id="erreurForm" role="alert"></div>
-        <div class="aide">« Voir la sélection » montre les titres retenus (à écouter, à retirer) avant de fabriquer : quelques secondes, jusqu'à 2 min la première fois pour un thème en langue étrangère. La fabrication prend ensuite 1 à 4 minutes, plus 5 à 10 minutes si la vidéo est montée. Vous pouvez fermer cet onglet : tout continue tant que la fenêtre noire reste ouverte.</div>
+        <div class="aide">« Voir la sélection » montre les titres retenus (à écouter, à retirer) avant de fabriquer : quelques secondes, jusqu'à 2 min la première fois pour un thème en langue étrangère. La fabrication prend ensuite 1 à 4 minutes, plus 5 à 10 minutes si la vidéo est montée. Vous pouvez fermer cet onglet : tout continue tant que la fenêtre « Blind test » reste ouverte.</div>
       </form>
     </section>
 
@@ -644,7 +644,7 @@ function brancher(b) {
   };
   else if (b.dataset.action === "supprimer") b.onclick = () => {
     const l = E.lots.find((x) => x.id === lot) || {};
-    if (confirm(`Mettre « ${l.nom} » à la corbeille ? (récupérable depuis la corbeille de Windows)`))
+    if (confirm(`Mettre « ${l.nom} » à la corbeille ? (récupérable depuis la corbeille)`))
       poster("/atelier/lot/supprimer", { lot }).catch((e) => alert(e.message));
   };
   else if (b.dataset.action === "dossier") b.onclick = () => poster("/atelier/ouvrir", { lot }).catch((e) => alert(e.message));
@@ -926,7 +926,7 @@ async function boucle() {
     rendreFabrication(); rendrePartie(); rendreLots(); rendreBoutons();
     boucle();
   } catch {
-    $("deconnecte").textContent = "Programme arrêté ou injoignable : la fenêtre noire « Blind test » est-elle ouverte ? Nouvel essai…";
+    $("deconnecte").textContent = "Programme arrêté ou injoignable : la fenêtre « Blind test » est-elle ouverte ? Nouvel essai…";
     $("deconnecte").hidden = false;
     setTimeout(boucle, 3000);
   }

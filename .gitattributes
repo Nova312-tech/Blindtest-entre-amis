@@ -1,2 +1,4 @@
 # fichiers Windows : fins de ligne Windows conservées telles quelles (sinon Installer.bat peut ne pas fonctionner)
 *.bat -text
+# lanceurs Mac : fins de ligne Unix obligatoires
+*.command text eol=lf

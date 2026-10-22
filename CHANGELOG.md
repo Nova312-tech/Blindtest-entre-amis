@@ -1,5 +1,11 @@
 # Nouveautés
 
+## Version 1.1.0
+
+- **Compatible Mac** : `Installer (Mac).command` (Homebrew, Python, ffmpeg, raccourci sur le bureau) et
+  `Blind test (Mac).command`. Polices de la vidéo, corbeille, ouverture des dossiers, mise en veille,
+  Cloudflare et Tailscale adaptés au Mac.
+
 ## Version 1.0.0
 
 Première version publique.
