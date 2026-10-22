@@ -547,7 +547,7 @@ for _p in ("EG", "LB", "SA", "AE", "IQ", "SY", "JO"):
 MB_API = "https://musicbrainz.org/ws/2/artist/"
 # MusicBrainz demande que chaque application se présente (nom, version, contact) : mettez l'adresse de votre
 # dépôt ou de votre site à la place de CONTACT si vous publiez le programme
-APPLI, CONTACT = "BlindTestEntreAmis/1.0", "https://github.com"
+APPLI, CONTACT = "BlindTestEntreAmis/1.0", "https://github.com/Nova312-tech/Blindtest-entre-amis"
 MB_UA = {"User-Agent": f"{APPLI} ( {CONTACT} )", "Accept": "application/json"}
 FICHIER_PAYS = DOSSIER_CACHE / "pays_artistes.json"
 PAYS_MAX = 200           # vérifications MusicBrainz par fabrication (une par seconde ; mémorisées ensuite)
