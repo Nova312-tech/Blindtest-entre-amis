@@ -4,7 +4,19 @@ Un blind test façon **Kahoot**, pour jouer en soirée : la musique passe sur la
 chacun répond sur **son téléphone**, et un classement s'affiche après chaque chanson.
 
 Vous choisissez un thème (« années 80 », « comédies musicales »…), une playlist Deezer ou Spotify, ou votre
-propre liste de chansons : le programme prépare tout seul les extraits et les questions.
+propre liste de chansons : le programme prépare les extraits et les questions.
+
+**En bref :** un atelier pour créer et gérer les quiz, un jeu en direct sur grand écran et téléphone, et un
+générateur facultatif de vidéos musicales. Le projet fonctionne sur **Windows et Mac** ; les joueurs
+rejoignent la partie depuis le navigateur de leur téléphone, sans installer d'application.
+
+### Ce que le projet permet de faire
+
+- Créer un quiz depuis un thème, une playlist Deezer ou Spotify, ou une liste de chansons personnelle.
+- Préécouter et retirer des titres avant fabrication, puis corriger les réponses ou remplacer une chanson.
+- Jouer sur le même Wi-Fi ou à distance, avec QR code, équipes, plusieurs modes de jeu et classement.
+- Archiver les anciens quiz, faire un essai sans remplacer le quiz courant et reprendre une partie interrompue.
+- Générer, en option, une vidéo prête à monter ou à publier, avec extraits, décompte et réponses.
 
 | L'écran principal (télé, PC) | Le téléphone de chaque joueur |
 |---|---|
@@ -108,6 +120,15 @@ l'actuel, qui est rangé dans les **archives** (toujours jouable). Le **mode ess
   réponse de suite. Certaines questions valent **×2**.
 - **Sur l'écran** : pause (**P**), réécouter l'extrait (**R**), révéler (**barre d'espace**), plein écran (**F**).
   Cliquez sur un pseudo dans la salle d'attente pour retirer un joueur.
+- **Les résultats sur téléphone** : chaque joueur voit si sa réponse est juste, son score et son classement.
+  En fin de partie, un résumé personnel affiche ses statistiques et permet à l'animateur de rejouer avec le même groupe.
+
+<p align="center">
+  <a href="docs/captures/ecran_question.png"><img src="docs/captures/ecran_question.png" width="520" alt="Question et quatre propositions affichées sur l'écran principal"></a>
+  <a href="docs/captures/telephone_resultat.png"><img src="docs/captures/telephone_resultat.png" width="190" alt="Résultat d'une réponse sur le téléphone"></a>
+  <a href="docs/captures/telephone_fin.png"><img src="docs/captures/telephone_fin.png" width="190" alt="Résumé personnel de fin de partie sur le téléphone"></a>
+</p>
+
 - **Le son** : la première fois, cliquez n'importe où sur l'écran de jeu si un bandeau jaune vous le demande
   (les navigateurs bloquent le son tant qu'on n'a pas cliqué sur la page).
 - **Si l'ordinateur s'éteint en pleine partie**, l'atelier propose de la **reprendre** au prochain lancement,
