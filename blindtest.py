@@ -34,11 +34,14 @@ Prérequis : Python 3.8+ et ffmpeg / ffprobe (dans le PATH ou à côté du scrip
 """
 
 import argparse
+import base64
+import hashlib
 import json
 import math
 import os
 import random
 import re
+import secrets
 import shutil
 import subprocess
 import sys
@@ -50,6 +53,8 @@ import unicodedata
 import urllib.error
 import urllib.parse
 import urllib.request
+import webbrowser
+from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from collections import Counter, deque
 from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime
@@ -80,6 +85,303 @@ FICHIER_HISTORIQUE = BASE / "historique.json"
 DOSSIER_CACHE = BASE / "cache"
 DOSSIER_TRAVAIL = BASE / "_travail"
 FICHIER_VERROU = BASE / "_generation.lock"
+FICHIER_SPOTIFY = BASE / "spotify.json"
+SPOTIFY_REDIRECT = "http://127.0.0.1:8765/callback"
+SPOTIFY_SCOPES = (
+    "playlist-read-private playlist-read-collaborative "
+    "user-library-read user-read-recently-played user-follow-read"
+)
+
+
+def spotify_config():
+    try:
+        data = json.loads(FICHIER_SPOTIFY.read_text(encoding="utf-8"))
+    except (OSError, ValueError, TypeError):
+        data = {}
+    return data
+
+
+def spotify_configurer(client_id):
+    client_id = str(client_id or "").strip()
+    if not re.fullmatch(r"[A-Za-z0-9]+", client_id):
+        raise Erreur("Le Spotify Client ID n’est pas valide.")
+    config = spotify_config()
+    config["client_id"] = client_id
+    config["redirect"] = SPOTIFY_REDIRECT
+    BASE.mkdir(parents=True, exist_ok=True)
+    FICHIER_SPOTIFY.write_text(json.dumps(config, ensure_ascii=False), encoding="utf-8")
+    return {"connecte": bool(config.get("tokens"))}
+
+
+def spotify_etat():
+    config = spotify_config()
+    return {
+        "configure": bool(config.get("client_id")),
+        "connecte": bool(config.get("tokens")),
+        "redirect": SPOTIFY_REDIRECT,
+    }
+
+
+def spotify_deconnecter():
+    config = spotify_config()
+    config.pop("tokens", None)
+    if config:
+        FICHIER_SPOTIFY.write_text(json.dumps(config, ensure_ascii=False), encoding="utf-8")
+    else:
+        FICHIER_SPOTIFY.unlink(missing_ok=True)
+    return {"connecte": False}
+
+
+def spotify_requete(chemin, token=None):
+    if not token:
+        raise Erreur("Spotify n’est pas connecté.")
+    req = urllib.request.Request(
+        f"https://api.spotify.com/v1{chemin}",
+        headers={"Authorization": f"Bearer {token}", "Accept": "application/json"},
+    )
+    try:
+        with urllib.request.urlopen(req, timeout=20) as reponse:
+            return json.loads(reponse.read().decode("utf-8"))
+    except urllib.error.HTTPError as e:
+        details = e.read().decode("utf-8", "replace")
+        raise Erreur(f"Spotify a refusé la demande ({e.code}) : {details[:300]}")
+    except (urllib.error.URLError, TimeoutError, OSError) as e:
+        raise Erreur(f"Impossible de joindre Spotify : {e}")
+
+
+def spotify_acces():
+    config = spotify_config()
+    tokens = config.get("tokens") or {}
+    token = tokens.get("access_token")
+    if token and time.time() < float(tokens.get("expires_at", 0)):
+        return token
+    refresh = tokens.get("refresh_token")
+    client_id = config.get("client_id")
+    if not refresh or not client_id:
+        raise Erreur("Spotify n’est pas connecté.")
+    data = urllib.parse.urlencode({
+        "grant_type": "refresh_token",
+        "refresh_token": refresh,
+        "client_id": client_id,
+    }).encode("ascii")
+    req = urllib.request.Request(
+        "https://accounts.spotify.com/api/token",
+        data=data,
+        headers={"Content-Type": "application/x-www-form-urlencoded"},
+        method="POST",
+    )
+    try:
+        with urllib.request.urlopen(req, timeout=20) as reponse:
+            nouveau = json.loads(reponse.read().decode("utf-8"))
+    except urllib.error.HTTPError as e:
+        raise Erreur(f"Spotify n’a pas pu renouveler la connexion ({e.code}). Reconnectez-vous.")
+    except (urllib.error.URLError, TimeoutError, OSError) as e:
+        raise Erreur(f"Impossible de renouveler Spotify : {e}")
+    tokens["access_token"] = nouveau["access_token"]
+    tokens["expires_at"] = time.time() + int(nouveau.get("expires_in", 3600)) - 60
+    if nouveau.get("refresh_token"):
+        tokens["refresh_token"] = nouveau["refresh_token"]
+    config["tokens"] = tokens
+    FICHIER_SPOTIFY.write_text(json.dumps(config, ensure_ascii=False), encoding="utf-8")
+    return tokens["access_token"]
+
+
+def spotify_lister_playlists(maximum=50):
+    token = spotify_acces()
+    items, offset = [], 0
+    while offset < maximum:
+        data = spotify_requete(f"/me/playlists?limit=50&offset={offset}", token)
+        nouvelles = data.get("items") or []
+        items.extend(nouvelles)
+        if len(nouvelles) < 50 or not data.get("next"):
+            break
+        offset += 50
+    return [{
+        "id": p["id"],
+        "nom": p.get("name") or "Playlist Spotify",
+        "url": p.get("external_urls", {}).get("spotify"),
+        "titres": (p.get("tracks") or {}).get("total", 0),
+        "privee": not bool(p.get("public")),
+    } for p in items[:maximum] if p.get("id")]
+
+
+def spotify_lire_playlist(pid, nombre=500):
+    token = spotify_acces()
+    meta = spotify_requete(f"/playlists/{pid}?fields=name,tracks.total", token)
+    pistes, offset = [], 0
+    while offset < nombre:
+        data = spotify_requete(
+            f"/playlists/{pid}/tracks?limit=50&offset={offset}&market=from_token",
+            token,
+        )
+        elements = data.get("items") or []
+        if not elements:
+            break
+        for item in elements:
+            piste = item.get("track")
+            if not piste or piste.get("is_local"):
+                continue
+            artistes = ", ".join(a.get("name", "") for a in piste.get("artists") or [])
+            titre = piste.get("name")
+            if titre:
+                pistes.append({"title": titre, "artists": artistes})
+            if len(pistes) >= nombre:
+                break
+        if len(pistes) >= nombre or not data.get("next"):
+            break
+        offset += 50
+    if not pistes:
+        raise Erreur("Cette playlist Spotify est vide ou inaccessible.")
+    return meta.get("name") or "Playlist Spotify", pistes
+
+
+def spotify_lire_collection(kind, nombre=500):
+    token = spotify_acces()
+    pistes, offset = [], 0
+    if kind == "recommandations":
+        elements = []
+        for endpoint in ("me/tracks?limit=25", "me/player/recently-played?limit=25"):
+            data = spotify_requete(f"/{endpoint}", token)
+            elements.extend(data.get("items") or [])
+    else:
+        endpoint = "/me/tracks" if kind == "aimes" else "/me/player/recently-played"
+        while offset < nombre:
+            limit = min(50, nombre - offset)
+            suffix = f"?limit={limit}&offset={offset}" if kind == "aimes" else f"?limit={limit}"
+            data = spotify_requete(endpoint + suffix, token)
+            elements = data.get("items") or []
+            if not elements:
+                break
+            for item in elements:
+                piste = item.get("track")
+                if not piste:
+                    continue
+                artistes = ", ".join(a.get("name", "") for a in piste.get("artists") or [])
+                titre = piste.get("name")
+                if titre:
+                    pistes.append({"title": titre, "artists": artistes})
+            if len(pistes) >= nombre or not data.get("next"):
+                break
+            if kind == "aimes":
+                offset += limit
+            else:
+                break
+        elements = []
+    if kind == "recommandations":
+        vus = set()
+        for item in elements:
+            piste = item.get("track")
+            if not piste:
+                continue
+            titre = piste.get("name")
+            artistes = ", ".join(a.get("name", "") for a in piste.get("artists") or [])
+            cle = (titre or "").lower(), artistes.lower()
+            if titre and cle not in vus:
+                vus.add(cle)
+                pistes.append({"title": titre, "artists": artistes})
+            if len(pistes) >= nombre:
+                break
+    if not pistes:
+        libelle = "titres aimés" if kind == "aimes" else "écoutes récentes"
+        raise Erreur(f"Spotify ne retourne aucun {libelle}.")
+    return ("Titres aimés" if kind == "aimes" else "Écoutes récentes"), pistes
+
+
+def spotify_demarrer_connexion():
+    config = spotify_config()
+    client_id = config.get("client_id") or os.environ.get("SPOTIFY_CLIENT_ID", "").strip()
+    if not client_id:
+        raise Erreur("Configurez d’abord le Spotify Client ID dans l’atelier.")
+    if not re.fullmatch(r"[A-Za-z0-9]+", client_id):
+        raise Erreur("Le Spotify Client ID n’est pas valide.")
+
+    verifier = base64.urlsafe_b64encode(secrets.token_bytes(64)).rstrip(b"=").decode("ascii")
+    challenge = base64.urlsafe_b64encode(
+        hashlib.sha256(verifier.encode("ascii")).digest()
+    ).rstrip(b"=").decode("ascii")
+    state = secrets.token_urlsafe(24)
+    resultat = {"ok": False, "erreur": None}
+
+    class Callback(BaseHTTPRequestHandler):
+        def log_message(self, *args):
+            pass
+
+        def do_GET(self):
+            query = urllib.parse.parse_qs(urllib.parse.urlparse(self.path).query)
+            if query.get("state", [""])[0] != state:
+                resultat["erreur"] = "État OAuth non valide."
+                self._reponse("Connexion Spotify refusée : état OAuth non valide.")
+                return
+            if query.get("error"):
+                resultat["erreur"] = "Connexion Spotify annulée."
+                self._reponse("Connexion Spotify annulée.")
+                return
+            code = query.get("code", [""])[0]
+            if not code:
+                resultat["erreur"] = "Spotify n’a pas renvoyé de code."
+                self._reponse("Connexion Spotify échouée.")
+                return
+            data = urllib.parse.urlencode({
+                "grant_type": "authorization_code",
+                "code": code,
+                "redirect_uri": SPOTIFY_REDIRECT,
+                "client_id": client_id,
+                "code_verifier": verifier,
+            }).encode("ascii")
+            req = urllib.request.Request(
+                "https://accounts.spotify.com/api/token",
+                data=data,
+                headers={"Content-Type": "application/x-www-form-urlencoded"},
+                method="POST",
+            )
+            try:
+                with urllib.request.urlopen(req, timeout=20) as reponse:
+                    tokens = json.loads(reponse.read().decode("utf-8"))
+                nouvelle = spotify_config()
+                nouvelle["client_id"] = client_id
+                nouvelle["redirect"] = SPOTIFY_REDIRECT
+                nouvelle["tokens"] = {
+                    "access_token": tokens["access_token"],
+                    "refresh_token": tokens.get("refresh_token"),
+                    "expires_at": time.time() + int(tokens.get("expires_in", 3600)) - 60,
+                }
+                FICHIER_SPOTIFY.write_text(json.dumps(nouvelle, ensure_ascii=False), encoding="utf-8")
+                resultat["ok"] = True
+                self._reponse("Spotify connecté. Vous pouvez fermer cette fenêtre.")
+            except Exception as e:
+                resultat["erreur"] = str(e)
+                self._reponse("Connexion Spotify échouée. Retournez dans l’atelier.")
+
+        def _reponse(self, message):
+            corps = ("<!doctype html><meta charset=\"utf-8\"><title>Spotify</title>"
+                     f"<p style=\"font:18px sans-serif\">{message}</p>").encode("utf-8")
+            self.send_response(200)
+            self.send_header("Content-Type", "text/html; charset=utf-8")
+            self.send_header("Content-Length", str(len(corps)))
+            self.end_headers()
+            self.wfile.write(corps)
+
+    try:
+        serveur = ThreadingHTTPServer(("127.0.0.1", 8765), Callback)
+    except OSError as e:
+        raise Erreur(f"Impossible d’ouvrir la redirection Spotify locale : {e}")
+
+    def attendre_callback():
+        serveur.handle_request()
+        serveur.server_close()
+
+    threading.Thread(target=attendre_callback, daemon=True).start()
+    params = urllib.parse.urlencode({
+        "response_type": "code",
+        "client_id": client_id,
+        "scope": SPOTIFY_SCOPES,
+        "redirect_uri": SPOTIFY_REDIRECT,
+        "state": state,
+        "code_challenge_method": "S256",
+        "code_challenge": challenge,
+    })
+    webbrowser.open("https://accounts.spotify.com/authorize?" + params)
+    return {"en_cours": True}
 
 
 class Erreur(Exception):
@@ -173,6 +475,8 @@ def detecter_source(texte):
     if not texte:
         raise Erreur("Indiquez un thème, un lien de playlist (Deezer ou Spotify) ou une liste de titres.")
     bas = texte.lower()
+    if bas.startswith("spotify:"):
+        return "spotify", texte
     if "spotify" in bas:
         return "spotify", texte
     if "deezer" in bas or (texte.isdigit() and len(texte) >= 5):   # numéro de playlist Deezer
@@ -1089,7 +1393,21 @@ def lire_spotify(lien, notes=None):
 
 def source_spotify(lien, nombre, bloques, args, notes):
     afficher("Lecture de la playlist Spotify...")
-    nom, pistes = lire_spotify(lien, notes)
+    if lien.startswith("spotify:playlist:"):
+        pid = lien.split(":", 2)[2]
+        nom, pistes_api = spotify_lire_playlist(pid)
+        pistes = [{"title": p["title"], "subtitle": p["artists"]} for p in pistes_api]
+    elif lien == "spotify:aimes":
+        nom, pistes_api = spotify_lire_collection("aimes")
+        pistes = [{"title": p["title"], "subtitle": p["artists"]} for p in pistes_api]
+    elif lien == "spotify:recent":
+        nom, pistes_api = spotify_lire_collection("recent")
+        pistes = [{"title": p["title"], "subtitle": p["artists"]} for p in pistes_api]
+    elif lien == "spotify:recommandations":
+        nom, pistes_api = spotify_lire_collection("recommandations")
+        pistes = [{"title": p["title"], "subtitle": p["artists"]} for p in pistes_api]
+    else:
+        nom, pistes = lire_spotify(lien, notes)
     afficher(f"  Playlist Spotify : {nom} ({len(pistes)} titres)")
     lignes, titres_source = [], []
     for p in pistes:

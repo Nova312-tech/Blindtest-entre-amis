@@ -92,6 +92,19 @@ Dans l'atelier :
      « pop anglaise ») ne prend **que** des chansons dans cette langue ;
    - un **lien de playlist Deezer ou Spotify** (copier-coller depuis l'application) ;
    - une **liste de chansons**, une par ligne : `Artiste - Titre` (voir le dossier [`exemples`](exemples)).
+
+   Depuis l’atelier, un compte Spotify peut aussi être connecté avec les permissions « playlist privée »,
+   « titres aimés » et « écoutes récentes ». Créez une application Spotify Developer, puis enregistrez son
+   Client ID dans le bloc **Compte Spotify**. Cette intégration utilise la redirection locale
+   `http://127.0.0.1:8765/callback` et ne demande pas de mot de passe ni de Client secret.
+
+   Configuration Spotify Developer :
+   1. ouvrez https://developer.spotify.com/dashboard ;
+   2. créez une application et ajoutez-vous comme utilisateur si elle reste en mode développement ;
+   3. dans les paramètres de l’application, ajoutez exactement
+      `http://127.0.0.1:8765/callback` dans les Redirect URIs ;
+   4. copiez le **Client ID** visible dans les paramètres ;
+   5. collez-le dans le bloc **Compte Spotify** de l’atelier, puis cliquez sur **Se connecter**.
 3. **Voir la sélection** : vous écoutez les titres retenus, vous retirez ceux qui ne vous plaisent pas,
    puis **« Fabriquer avec cette sélection »**. Comptez quelques minutes.
 

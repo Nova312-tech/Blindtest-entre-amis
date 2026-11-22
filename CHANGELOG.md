@@ -2,6 +2,8 @@
 
 ## Version 2.0.0
 
+- **Connexion Spotify OAuth** : playlists privées, titres aimés et écoutes récentes disponibles depuis l’atelier,
+  avec autorisation révoquable et stockage local des jetons sans Client secret.
 - **Pouvoirs équilibrables** : après deux erreurs consécutives, un joueur peut choisir un adversaire et lui
   transmettre un effet pour la question suivante.
 - **Effets disponibles** : révélation au ralenti, tomate, brouillard et rideau de cinéma.

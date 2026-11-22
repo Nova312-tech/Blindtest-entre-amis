@@ -206,6 +206,25 @@
             <span id="etatSon" role="status" aria-live="polite">Vérifiez que le son de l'écran est audible.</span>
           </div>
         </div>
+        <div class="champ" id="blocSpotify">
+          <span class="titre">Compte Spotify</span>
+          <div class="ligne">
+            <input type="text" id="spotifyClientId" maxlength="64" placeholder="Spotify Client ID">
+            <button class="bouton discret" id="spotifyConfigurer" type="button">Enregistrer</button>
+            <button class="bouton" id="spotifyConnexion" type="button">Se connecter</button>
+            <button class="bouton discret" id="spotifyDeconnexion" type="button" hidden>Déconnecter</button>
+          </div>
+          <div class="ligne" id="ligneSpotifySources" hidden>
+            <select id="spotifySource" aria-label="Source Spotify">
+              <option value="">Choisir une source Spotify…</option>
+              <option value="spotify:aimes">Titres aimés</option>
+              <option value="spotify:recent">Écoutes récentes</option>
+              <option value="spotify:recommandations">Sélection personnalisée</option>
+            </select>
+            <button class="bouton discret" id="spotifyUtiliser" type="button">Utiliser cette source</button>
+          </div>
+          <div class="aide" id="etatSpotify">Spotify n’est pas configuré.</div>
+        </div>
         <div class="aide">Les extraits audio et les questions seront préparés pour le quizz sur téléphones. La première préparation peut prendre quelques minutes.</div>
 
         <div class="champ ligne">
@@ -382,6 +401,74 @@ $("testerSon").onclick = async () => {
     if (contexte) await contexte.close();
     etat.textContent = `Test audio impossible : ${e.message}`;
   }
+};
+
+let spotifyEtatDernier = "";
+async function rendreSpotify() {
+  if (!E?.spotify) return;
+  const s = E.spotify;
+  $("spotifyConnexion").hidden = s.connecte;
+  $("spotifyDeconnexion").hidden = !s.connecte;
+  $("ligneSpotifySources").hidden = !s.connecte;
+  if (!s.configure) {
+    $("etatSpotify").textContent = "Configurez le Spotify Client ID, puis ouvrez la page d’autorisation.";
+  } else if (s.connecte) {
+    $("etatSpotify").textContent = "Spotify connecté. Vos playlists privées et vos favoris sont disponibles.";
+  } else {
+    $("etatSpotify").textContent = "Spotify configuré. Cliquez sur « Se connecter ».";
+  }
+  if (s.connecte && spotifyEtatDernier !== "connecte") {
+    spotifyEtatDernier = "connecte";
+    try {
+      const data = await poster("/atelier/spotify/playlists", {});
+      const select = $("spotifySource");
+      for (const option of [...select.querySelectorAll("[data-playlist]")]) option.remove();
+      for (const playlist of data.playlists) {
+        const option = document.createElement("option");
+        option.dataset.playlist = "1";
+        option.value = `spotify:playlist:${playlist.id}`;
+        option.textContent = `${playlist.nom} (${playlist.titres} titres${playlist.privee ? ", privée" : ""})`;
+        select.appendChild(option);
+      }
+    } catch (e) {
+      $("etatSpotify").textContent = e.message;
+    }
+  } else if (!s.connecte) {
+    spotifyEtatDernier = "";
+  }
+}
+
+$("spotifyConfigurer").onclick = async () => {
+  try {
+    await poster("/atelier/spotify/configurer", { client_id: $("spotifyClientId").value });
+    $("etatSpotify").textContent = "Client ID enregistré. Cliquez sur « Se connecter ».";
+  } catch (e) {
+    $("etatSpotify").textContent = e.message;
+  }
+};
+
+$("spotifyConnexion").onclick = async () => {
+  try {
+    $("etatSpotify").textContent = "Autorisation Spotify ouverte dans votre navigateur…";
+    await poster("/atelier/spotify/connexion", {});
+  } catch (e) {
+    $("etatSpotify").textContent = e.message;
+  }
+};
+
+$("spotifyDeconnexion").onclick = async () => {
+  try {
+    await poster("/atelier/spotify/deconnexion", {});
+    $("etatSpotify").textContent = "Spotify déconnecté.";
+  } catch (e) {
+    $("etatSpotify").textContent = e.message;
+  }
+};
+
+$("spotifyUtiliser").onclick = () => {
+  if (!$("spotifySource").value) return;
+  $("source").value = $("spotifySource").value;
+  majSource();
 };
 
 // ---------- formulaire ----------
@@ -933,6 +1020,7 @@ async function boucle() {
     $("deconnecte").hidden = true;
     version = E.version;
     if (premier) { initForm(); majSource(); premier = false; }
+    rendreSpotify();
     rendreFabrication(); rendrePartie(); rendreLots(); rendreBoutons();
     boucle();
   } catch {

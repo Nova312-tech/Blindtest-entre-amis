@@ -2164,6 +2164,7 @@ class Application:
                 "partie": self.resume_partie(), "internet": self.internet_actif() and self.url_joueur != self.url_locale,
                 "url_joueur": self.url_joueur, "url_ecran": self.url_ecran, "code": self.code, "alerte": self.alerte,
                 "reprise": self.resume_reprise(),
+                "spotify": bt.spotify_etat(),
                 "formats": [{"duree": f["duree"], "nombre": f["nombre"]} for f in bt.FORMATS.values()],
                 "duree_min": bt.DUREE_MIN, "duree_max": bt.DUREE_MAX, "preview": bt.DUREE_PREVIEW,
                 "duree_reponse": bt.DUREE_REPONSE, "adresse_fixe": adresse_tailscale(),
@@ -2365,6 +2366,14 @@ def fabriquer_gestionnaire(app):
                                "/atelier/lot/supprimer": app.supprimer}
                     if u.path in actions:
                         return self._json(dict(actions[u.path](corps) or {}, ok=True))
+                    if u.path == "/atelier/spotify/configurer":
+                        return self._json(dict(bt.spotify_configurer(corps.get("client_id")), ok=True))
+                    if u.path == "/atelier/spotify/connexion":
+                        return self._json(dict(bt.spotify_demarrer_connexion(), ok=True))
+                    if u.path == "/atelier/spotify/deconnexion":
+                        return self._json(dict(bt.spotify_deconnecter(), ok=True))
+                    if u.path == "/atelier/spotify/playlists":
+                        return self._json({"playlists": bt.spotify_lister_playlists()}, ok=True)
                     if u.path == "/atelier/connexion":
                         try:
                             bt.api("/search?q=Daft%20Punk&limit=1")

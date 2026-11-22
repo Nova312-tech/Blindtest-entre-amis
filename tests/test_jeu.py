@@ -14,6 +14,21 @@ import jeu
 
 
 class JeuTests(unittest.TestCase):
+    def test_spotify_configurable_sans_secret_et_sans_connexion(self):
+        with tempfile.TemporaryDirectory() as temporaire:
+            fichier = Path(temporaire) / "spotify.json"
+            with patch.object(bt, "FICHIER_SPOTIFY", fichier):
+                etat = bt.spotify_etat()
+                self.assertFalse(etat["configure"])
+                self.assertFalse(etat["connecte"])
+                bt.spotify_configurer("AbCdEf123456")
+                etat = bt.spotify_etat()
+                self.assertTrue(etat["configure"])
+                self.assertFalse(etat["connecte"])
+                bt.spotify_deconnecter()
+                self.assertTrue(fichier.exists())
+                self.assertFalse(bt.spotify_etat()["connecte"])
+
     def test_vote_recu_est_confirme_et_score_calcule(self):
         with tempfile.TemporaryDirectory() as temporaire:
             dossier = Path(temporaire)
