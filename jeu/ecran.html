@@ -238,11 +238,10 @@ async function action(nom, corps) {
 }
 
 function cartes(el, choix, comptes, bonne, forme) {
-  const qui = forme === "meme_titre";                  // « Qui chante ? » : l'artiste en gros
   el.innerHTML = choix.map((c, i) => `
     <div class="carte c${i}${i === bonne ? " bonne" : ""}">
       <span class="lettre">${LETTRES[i]}</span>
-      <span><span class="titre">${echapper(qui ? c.artiste : c.titre)}</span><span class="artiste">${echapper(qui ? c.titre : c.artiste)}</span></span>
+      <span><span class="titre">${echapper(c.titre)}</span><span class="artiste">${echapper(c.artiste)}</span></span>
       ${comptes ? `<span class="barre">${comptes[i]} vote${comptes[i] > 1 ? "s" : ""}</span>` : ""}
     </div>`).join("");
 }

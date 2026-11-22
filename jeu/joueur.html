@@ -440,7 +440,7 @@ function rendre(e) {
     $("boutons").innerHTML = ordreChoix.map((i, position) => {
       const c = e.choix[i];
       return `<button class="c${position}" data-i="${i}"><span class="lettre">${LETTRES[position]}</span>
-        <span><span class="t">${echapper(e.forme === "meme_titre" ? c.artiste : c.titre)}</span><span class="artiste">${echapper(e.forme === "meme_titre" ? c.titre : c.artiste)}</span></span></button>`;
+        <span><span class="t">${echapper(c.titre)}</span><span class="artiste">${echapper(c.artiste)}</span></span></button>`;
     }).join("");
     for (const b of $("boutons").querySelectorAll("button")) {
       b.onclick = () => voter(cleQ, +b.dataset.i);

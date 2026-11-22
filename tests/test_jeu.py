@@ -14,6 +14,15 @@ import jeu
 
 
 class JeuTests(unittest.TestCase):
+    def test_titre_est_toujours_affiche_avant_artiste(self):
+        dossier = Path(jeu.__file__).parent / "jeu"
+        joueur = (dossier / "joueur.html").read_text(encoding="utf-8")
+        ecran = (dossier / "ecran.html").read_text(encoding="utf-8")
+        self.assertIn("<span><span class=\"t\">${echapper(c.titre)}</span><span class=\"artiste\">${echapper(c.artiste)}</span></span>", joueur)
+        self.assertIn('<span><span class="titre">${echapper(c.titre)}</span><span class="artiste">${echapper(c.artiste)}</span></span>', ecran)
+        self.assertNotIn('e.forme === "meme_titre"', joueur)
+        self.assertNotIn('const qui = forme === "meme_titre"', ecran)
+
     def test_spotify_configurable_sans_secret_et_sans_connexion(self):
         with tempfile.TemporaryDirectory() as temporaire:
             fichier = Path(temporaire) / "spotify.json"
