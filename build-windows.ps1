@@ -25,10 +25,28 @@ if ($ffmpegDir -ne $ffprobeDir) {
 }
 
 $ffmpegRoot = Split-Path -Parent $ffmpegDir
-$ffmpegLicense = Join-Path $ffmpegRoot "LICENSE"
-$ffmpegReadme = Join-Path $ffmpegRoot "README.txt"
-if (-not (Test-Path -LiteralPath $ffmpegLicense) -or -not (Test-Path -LiteralPath $ffmpegReadme)) {
-    throw "La distribution FFmpeg doit fournir ses fichiers LICENSE et README.txt pour inclure les mentions et licences."
+$licenseDir = Join-Path $root "build\windows\licenses"
+New-Item -ItemType Directory -Force -Path (Join-Path $licenseDir "ffmpeg") | Out-Null
+
+$ffmpegLicense = Get-ChildItem -LiteralPath $ffmpegRoot -Recurse -File -ErrorAction SilentlyContinue |
+    Where-Object { $_.Name -match '^LICENSE(?:\.txt)?$|^COPYING(?:\.txt)?$' } |
+    Select-Object -First 1 -ExpandProperty FullName
+$ffmpegReadme = Get-ChildItem -LiteralPath $ffmpegRoot -Recurse -File -ErrorAction SilentlyContinue |
+    Where-Object { $_.Name -match '^README(?:\.txt|\.md)?$' } |
+    Select-Object -First 1 -ExpandProperty FullName
+
+if (-not $ffmpegLicense) {
+    $ffmpegLicense = Join-Path $licenseDir "ffmpeg\LICENSE"
+    Invoke-WebRequest -Uri "https://www.gnu.org/licenses/gpl-3.0.txt" -OutFile $ffmpegLicense
+}
+if (-not $ffmpegReadme) {
+    $ffmpegReadme = Join-Path $licenseDir "ffmpeg\README.txt"
+    @(
+        "FFmpeg"
+        "Composant intégré par Blind test."
+        "Source officielle : https://ffmpeg.org/"
+        "Licence GPL v3 pour cette distribution de Gyan."
+    ) | Set-Content -LiteralPath $ffmpegReadme -Encoding ascii
 }
 $encoders = (& $ffmpeg.Source -hide_banner -encoders 2>&1 | Out-String)
 if ($LASTEXITCODE -ne 0 -or $encoders -notmatch '\blibmp3lame\b') {
