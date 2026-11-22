@@ -1369,14 +1369,61 @@ def suite_spotify(pid, jeton, pistes):
     return [connus.get(u) or lus[u] for u in uris if u in connus or u in lus], message
 
 
+def spotify_hote_autorise(url):
+    try:
+        part = urllib.parse.urlsplit(url)
+        if part.scheme.lower() != "https":
+            return False
+        if part.username or part.password:
+            return False
+        if part.port not in (None, 443):
+            return False
+        hote = (part.hostname or "").lower()
+        if hote in ("open.spotify.com", "spotify.link", "spotify.app.link"):
+            return True
+        if hote.endswith(".spotify.com"):
+            return True
+    except (ValueError, UnicodeError):
+        return False
+    return False
+
+
+def spotify_telecharger_lien_court(url):
+    """Follow redirects only while staying on Spotify-owned hosts."""
+    if not spotify_hote_autorise(url):
+        raise Erreur("Lien Spotify court refusé : utilisez un lien officiel Spotify HTTPS.")
+
+    class RedirectionSpotify(urllib.request.HTTPRedirectHandler):
+        def redirect_request(self, req, fp, code, msg, headers, newurl):
+            if not spotify_hote_autorise(newurl):
+                raise urllib.error.HTTPError(newurl, code, "Redirection hors de Spotify refusée", headers, fp)
+            return super().redirect_request(req, fp, code, msg, headers, newurl)
+
+    try:
+        ouverture = urllib.request.build_opener(RedirectionSpotify())
+        with ouverture.open(urllib.request.Request(url, headers=UA), timeout=20) as reponse:
+            final = reponse.geturl()
+            contenu = reponse.read(200_000).decode("utf-8", "replace")
+    except urllib.error.HTTPError as e:
+        raise Erreur(f"Impossible d’ouvrir le lien Spotify : {e}")
+    except (urllib.error.URLError, TimeoutError, OSError) as e:
+        raise Erreur(f"Impossible d’ouvrir le lien Spotify : {e}")
+    if not spotify_hote_autorise(final):
+        raise Erreur("Redirection Spotify hors domaine refusée.")
+    return final + " " + contenu
+
+
 def lire_spotify(lien, notes=None):
     lien = lien.strip().strip('"')
-    if "spotify.link" in lien or "spotify.app.link" in lien:
-        try:
-            with urllib.request.urlopen(urllib.request.Request(lien, headers=UA), timeout=20) as r:
-                lien = r.geturl() + " " + r.read(200_000).decode("utf-8", "replace")
-        except Exception as e:
-            raise Erreur(f"Impossible d'ouvrir le lien Spotify : {e}")
+    lien_part = urllib.parse.urlsplit(lien)
+    hote = (lien_part.hostname or "").lower()
+    if hote in ("spotify.link", "spotify.app.link"):
+        lien = spotify_telecharger_lien_court(lien)
+    elif hote == "open.spotify.com" or hote.endswith(".spotify.com"):
+        if not spotify_hote_autorise(lien):
+            raise Erreur("Lien Spotify refusé : HTTPS requis.")
+    elif lien_part.scheme:
+        raise Erreur("Lien Spotify non reconnu : utilisez open.spotify.com ou les liens spotify.link.")
     m = re.search(r"playlist[/:]([A-Za-z0-9]{10,})", lien)
     if not m:
         raise Erreur("Lien Spotify non reconnu. Exemple : https://open.spotify.com/playlist/1eulR6Pz29spTdeXqvI4cr")

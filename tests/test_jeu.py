@@ -14,6 +14,15 @@ import jeu
 
 
 class JeuTests(unittest.TestCase):
+    def test_liens_spotify_courts_sont_valides_strictement(self):
+        self.assertTrue(bt.spotify_hote_autorise("https://spotify.link/abc"))
+        self.assertTrue(bt.spotify_hote_autorise("https://open.spotify.com/playlist/1234567890"))
+        self.assertFalse(bt.spotify_hote_autorise("http://127.0.0.1:8765/callback"))
+        self.assertFalse(bt.spotify_hote_autorise("http://evil.test/?spotify.link"))
+        self.assertFalse(bt.spotify_hote_autorise("https://open.spotify.com@evil.test/playlist/1234567890"))
+        with self.assertRaises(bt.Erreur):
+            bt.lire_spotify("http://evil.test/?spotify.link")
+
     def test_titre_est_toujours_affiche_avant_artiste(self):
         dossier = Path(jeu.__file__).parent / "jeu"
         joueur = (dossier / "joueur.html").read_text(encoding="utf-8")
