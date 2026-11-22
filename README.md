@@ -46,12 +46,14 @@ Il faut un **PC sous Windows 10 ou 11** ou un **Mac**, relié à Internet.
 
 ### Sur Windows
 
-1. **Téléchargez** le programme : en haut de cette page, bouton vert **« Code »** puis **« Download ZIP »**
-   (ou la dernière version dans **« Releases »**, à droite).
-2. **Décompressez** le fichier ZIP (clic droit → « Extraire tout… »), par exemple dans « Documents ».
-3. Dans le dossier obtenu, **double-cliquez sur `Installer.bat`**.
-   Il installe ce qui manque (Python et ffmpeg, deux programmes gratuits) et crée un raccourci
-   **« Blind test »** sur le bureau.
+1. Sur la page **« Releases »**, téléchargez `Blind-test-v2-FR-Setup.exe` depuis la dernière version.
+2. Double-cliquez sur l’installeur et acceptez l’emplacement proposé.
+3. Lancez **Blind test** depuis le menu Démarrer ou le raccourci de bureau.
+
+Le paquet Windows contient Python, FFmpeg, ffprobe, Cloudflared et les pages nécessaires :
+aucune installation technique séparée n’est requise.
+
+Alternative depuis les sources : téléchargez le ZIP, décompressez-le, puis lancez `Installer.bat`.
 
 > Windows peut afficher « Windows a protégé votre ordinateur » : cliquez sur **« Informations complémentaires »**
 > puis **« Exécuter quand même »**. C'est normal pour un programme téléchargé qui n'est pas vendu en magasin.
@@ -94,17 +96,10 @@ Dans l'atelier :
    - une **liste de chansons**, une par ligne : `Artiste - Titre` (voir le dossier [`exemples`](exemples)).
 
    Depuis l’atelier, un compte Spotify peut aussi être connecté avec les permissions « playlist privée »,
-   « titres aimés » et « écoutes récentes ». Créez une application Spotify Developer, puis enregistrez son
-   Client ID dans le bloc **Compte Spotify**. Cette intégration utilise la redirection locale
-   `http://127.0.0.1:8765/callback` et ne demande pas de mot de passe ni de Client secret.
-
-   Configuration Spotify Developer :
-   1. ouvrez https://developer.spotify.com/dashboard ;
-   2. créez une application et ajoutez-vous comme utilisateur si elle reste en mode développement ;
-   3. dans les paramètres de l’application, ajoutez exactement
-      `http://127.0.0.1:8765/callback` dans les Redirect URIs ;
-   4. copiez le **Client ID** visible dans les paramètres ;
-   5. collez-le dans le bloc **Compte Spotify** de l’atelier, puis cliquez sur **Se connecter**.
+   « titres aimés » et « écoutes récentes ». Cliquez sur **Se connecter** dans le bloc
+   **Compte Spotify** : l’application utilisée est déjà configurée dans le paquet.
+   Cette intégration utilise la redirection locale `http://127.0.0.1:8765/callback`,
+   ne demande aucun mot de passe ni Client secret et conserve les jetons hors du dépôt.
 3. **Voir la sélection** : vous écoutez les titres retenus, vous retirez ceux qui ne vous plaisent pas,
    puis **« Fabriquer avec cette sélection »**. Comptez quelques minutes.
 

@@ -1,5 +1,12 @@
 # Nouveautés
 
+## Version 2.1.0
+
+- **Installation Windows autonome** : nouvel installateur avec FFmpeg, ffprobe, Cloudflare et les pages du jeu
+  inclus. Une empreinte SHA-256 est publiée avec chaque fichier de release.
+- **Spotify prêt à l’emploi** : le Client ID public est inclus dans l’application ; les données personnelles
+  restent locales et les jetons ne sont jamais publiés dans le dépôt.
+
 ## Version 2.0.0
 
 - **Connexion Spotify OAuth** : playlists privées, titres aimés et écoutes récentes disponibles depuis l’atelier,

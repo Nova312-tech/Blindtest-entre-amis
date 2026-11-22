@@ -87,6 +87,7 @@ DOSSIER_TRAVAIL = BASE / "_travail"
 FICHIER_VERROU = BASE / "_generation.lock"
 FICHIER_SPOTIFY = BASE / "spotify.json"
 SPOTIFY_REDIRECT = "http://127.0.0.1:8765/callback"
+SPOTIFY_PUBLIC_CLIENT_ID = "9aa9f2fe49544c10b7331c5545798ed4"
 SPOTIFY_SCOPES = (
     "playlist-read-private playlist-read-collaborative "
     "user-library-read user-read-recently-played user-follow-read"
@@ -102,7 +103,7 @@ def spotify_config():
 
 
 def spotify_configurer(client_id):
-    client_id = str(client_id or "").strip()
+    client_id = str(client_id or SPOTIFY_PUBLIC_CLIENT_ID).strip()
     if not re.fullmatch(r"[A-Za-z0-9]+", client_id):
         raise Erreur("Le Spotify Client ID n’est pas valide.")
     config = spotify_config()
@@ -115,8 +116,9 @@ def spotify_configurer(client_id):
 
 def spotify_etat():
     config = spotify_config()
+    client_id = config.get("client_id") or os.environ.get("SPOTIFY_CLIENT_ID", "").strip() or SPOTIFY_PUBLIC_CLIENT_ID
     return {
-        "configure": bool(config.get("client_id")),
+        "configure": bool(client_id),
         "connecte": bool(config.get("tokens")),
         "redirect": SPOTIFY_REDIRECT,
     }
@@ -156,7 +158,7 @@ def spotify_acces():
     if token and time.time() < float(tokens.get("expires_at", 0)):
         return token
     refresh = tokens.get("refresh_token")
-    client_id = config.get("client_id")
+    client_id = config.get("client_id") or os.environ.get("SPOTIFY_CLIENT_ID", "").strip() or SPOTIFY_PUBLIC_CLIENT_ID
     if not refresh or not client_id:
         raise Erreur("Spotify n’est pas connecté.")
     data = urllib.parse.urlencode({
@@ -289,7 +291,7 @@ def spotify_lire_collection(kind, nombre=500):
 
 def spotify_demarrer_connexion():
     config = spotify_config()
-    client_id = config.get("client_id") or os.environ.get("SPOTIFY_CLIENT_ID", "").strip()
+    client_id = config.get("client_id") or os.environ.get("SPOTIFY_CLIENT_ID", "").strip() or SPOTIFY_PUBLIC_CLIENT_ID
     if not client_id:
         raise Erreur("Configurez d’abord le Spotify Client ID dans l’atelier.")
     if not re.fullmatch(r"[A-Za-z0-9]+", client_id):

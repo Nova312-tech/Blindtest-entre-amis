@@ -48,7 +48,7 @@ class JeuTests(unittest.TestCase):
             fichier = Path(temporaire) / "spotify.json"
             with patch.object(bt, "FICHIER_SPOTIFY", fichier):
                 etat = bt.spotify_etat()
-                self.assertFalse(etat["configure"])
+                self.assertTrue(etat["configure"])
                 self.assertFalse(etat["connecte"])
                 bt.spotify_configurer("AbCdEf123456")
                 etat = bt.spotify_etat()

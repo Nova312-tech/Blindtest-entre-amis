@@ -1,5 +1,5 @@
 #define AppName "Blind test"
-#define AppVersion "2.0.0"
+#define AppVersion "2.1.0"
 #define AppExeName "Blind test.exe"
 #ifndef AppSourceDir
   #define AppSourceDir "build\windows\dist\Blind test"
