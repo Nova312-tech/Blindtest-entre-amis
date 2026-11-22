@@ -22,6 +22,7 @@ class JeuTests(unittest.TestCase):
         self.assertIn('<span><span class="titre">${echapper(c.titre)}</span><span class="artiste">${echapper(c.artiste)}</span></span>', ecran)
         self.assertNotIn('e.forme === "meme_titre"', joueur)
         self.assertNotIn('const qui = forme === "meme_titre"', ecran)
+        self.assertNotIn('c.artiste}</span></span><span class="artiste">${echapper(c.titre)', ecran)
 
     def test_spotify_configurable_sans_secret_et_sans_connexion(self):
         with tempfile.TemporaryDirectory() as temporaire:
