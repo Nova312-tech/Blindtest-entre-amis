@@ -535,6 +535,8 @@ def proposer(c, pool, res, oeuvres_lot, preferee=None, rang=0):
     bt.verifier_annulation()
     ordre = list(FORMES)
     random.shuffle(ordre)                                # les autres formes en repli, dans le désordre
+    if c.get("oeuvre"):
+        ordre = ["meme_titre", "differents", "grille", "meme_artiste"]
     if preferee in ordre:
         ordre.remove(preferee)
         ordre.insert(0, preferee)
@@ -542,7 +544,8 @@ def proposer(c, pool, res, oeuvres_lot, preferee=None, rang=0):
     if c.get("oeuvre"):
         essais.append(("oeuvre", (c["oeuvre"], (c.get("titre_court") or c["titre"]).strip()),
                        lambda s: choix_oeuvres(c, pool, res, rang)))
-    essais.append(("artiste", titre_affiche(c), lambda s: choix_artistes(c, pool, res, oeuvres_lot, s, rang)))
+    else:
+        essais.append(("artiste", titre_affiche(c), lambda s: choix_artistes(c, pool, res, oeuvres_lot, s, rang)))
     for mode, bonne, fabrique in essais:
         suivi = {"doute": False}
         fabriques = fabrique(suivi)
@@ -561,7 +564,7 @@ def proposer(c, pool, res, oeuvres_lot, preferee=None, rang=0):
             "doute": True}
 
 
-VERSION_QUIZ = 4        # 3 : œuvres, membres du cast, profils ; 4 : leurres hors du blind test (anti-déduction)
+VERSION_QUIZ = 5        # 3 : œuvres, membres du cast, profils ; 4 : leurres hors du blind test ; 5 : œuvres prioritaires
 
 
 def faire_question(n, c, r):

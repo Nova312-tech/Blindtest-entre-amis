@@ -14,6 +14,16 @@ import jeu
 
 
 class JeuTests(unittest.TestCase):
+    def test_oeuvre_prioritaire_sans_repli_sur_artiste(self):
+        source = Path(jeu.__file__).read_text(encoding="utf-8")
+        self.assertIn('ordre = ["meme_titre", "differents", "grille", "meme_artiste"]', source)
+        debut = source.index("    if c.get(\"oeuvre\"):\n", source.index("def proposer"))
+        fin = source.index("    for mode, bonne, fabrique in essais:", debut)
+        bloc = source[debut:fin]
+        self.assertIn('essais.append(("oeuvre"', bloc)
+        self.assertIn('if c.get("oeuvre"):\n        essais.append(("oeuvre"', source[source.index("def proposer"):fin])
+        self.assertIn('else:\n        essais.append(("artiste"', bloc)
+
     def test_liens_spotify_courts_sont_valides_strictement(self):
         self.assertTrue(bt.spotify_hote_autorise("https://spotify.link/abc"))
         self.assertTrue(bt.spotify_hote_autorise("https://open.spotify.com/playlist/1234567890"))
