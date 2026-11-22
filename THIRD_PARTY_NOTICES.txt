@@ -1,0 +1,24 @@
+This application bundles third-party software:
+
+FFmpeg
+The bundled FFmpeg executable and shared libraries come from the FFmpeg Windows
+shared build by Gyan. This build is configured with --enable-gpl and is licensed
+under the GNU General Public License, version 3 or later. The accompanying
+licenses\ffmpeg\LICENSE and licenses\ffmpeg\README.txt files contain the license
+and build information. The FFmpeg source revision is
+https://github.com/FFmpeg/FFmpeg/commit/946fcce07b ; the included README contains
+the build configuration and external-library information.
+
+cloudflared
+The bundled cloudflared executable is distributed by Cloudflare under the Apache
+License, Version 2.0. Its license is included at
+licenses\cloudflared\cloudflared-LICENSE. The source for the bundled 2026.9.3
+release is available at https://github.com/cloudflare/cloudflared/tree/2026.9.3 .
+
+The Blind test application invokes these programs as separate processes.
+
+qrcodejs
+--------
+Version 1.0.0, distributed under the MIT License.
+Copyright (c) 2012 davidshimjs.
+The complete license is included as jeu\QRCODEJS-LICENSE.txt.

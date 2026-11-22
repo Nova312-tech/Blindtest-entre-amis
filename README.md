@@ -7,7 +7,7 @@ Vous choisissez un thème (« années 80 », « comédies musicales »…), une 
 propre liste de chansons : le programme prépare les extraits et les questions.
 
 **En bref :** un atelier pour créer et gérer les quiz, un jeu en direct sur grand écran et téléphone, et un
-générateur facultatif de vidéos musicales. Le projet fonctionne sur **Windows et Mac** ; les joueurs
+atelier de quiz réservé aux téléphones. Le projet fonctionne sur **Windows et Mac** ; les joueurs
 rejoignent la partie depuis le navigateur de leur téléphone, sans installer d'application.
 
 ### Ce que le projet permet de faire
@@ -16,7 +16,8 @@ rejoignent la partie depuis le navigateur de leur téléphone, sans installer d'
 - Préécouter et retirer des titres avant fabrication, puis corriger les réponses ou remplacer une chanson.
 - Jouer sur le même Wi-Fi ou à distance, avec QR code, équipes, plusieurs modes de jeu et classement.
 - Archiver les anciens quiz, faire un essai sans remplacer le quiz courant et reprendre une partie interrompue.
-- Générer, en option, une vidéo prête à monter ou à publier, avec extraits, décompte et réponses.
+- Gagner un pouvoir après deux erreurs consécutives, puis choisir un adversaire et lui infliger un malus
+  pour la question suivante.
 
 | L'écran principal (télé, PC) | Le téléphone de chaque joueur |
 |---|---|
@@ -91,10 +92,8 @@ Dans l'atelier :
      « pop anglaise ») ne prend **que** des chansons dans cette langue ;
    - un **lien de playlist Deezer ou Spotify** (copier-coller depuis l'application) ;
    - une **liste de chansons**, une par ligne : `Artiste - Titre` (voir le dossier [`exemples`](exemples)).
-3. **C'est pour…** : le **quiz sur téléphones**, une **vidéo YouTube** toute prête (avec décompte et réponses),
-   ou les deux.
-4. **Voir la sélection** : vous écoutez les titres retenus, vous retirez ceux qui ne vous plaisent pas,
-   puis **« Fabriquer avec cette sélection »**. Comptez 1 à 4 minutes (5 à 10 de plus pour une vidéo).
+3. **Voir la sélection** : vous écoutez les titres retenus, vous retirez ceux qui ne vous plaisent pas,
+   puis **« Fabriquer avec cette sélection »**. Comptez quelques minutes.
 
 Vos blind tests apparaissent dans **« Mes blind tests »**. Un nouveau blind test de la même durée remplace
 l'actuel, qui est rangé dans les **archives** (toujours jouable). Le **mode essai** (options avancées) fabrique
@@ -196,8 +195,7 @@ Pour signaler un problème ou proposer une idée : onglet **« Issues »** de ce
   même anciens). La version Mac est récente : n'hésitez pas à signaler tout souci (onglet « Issues »).
 - **Usage privé** : le programme utilise les extraits de 30 secondes que Deezer met librement à disposition,
   pour jouer entre amis. Les playlists Spotify sont lues par une méthode non officielle qui peut cesser de
-  fonctionner. Si vous publiez une vidéo sur YouTube, les droits des chansons restent à votre charge
-  (YouTube peut la démonétiser ou la bloquer).
+  fonctionner.
 - **Données** : années de sortie, pays des artistes et profils viennent de [MusicBrainz](https://musicbrainz.org),
   base musicale libre ; la première préparation d'un blind test peut donc prendre une ou deux minutes.
 - **Rien n'est envoyé ailleurs** que vers Deezer, Spotify (lecture des playlists) et MusicBrainz. Tout reste sur
@@ -208,7 +206,7 @@ Pour signaler un problème ou proposer une idée : onglet **« Issues »** de ce
 | Fichier | Rôle |
 |---|---|
 | `jeu.py` | le programme principal : atelier, serveur de jeu, modes, équipes |
-| `blindtest.py` | la fabrication : recherche des chansons, découpe des extraits, vidéo |
+| `blindtest.py` | la fabrication : recherche des chansons et découpe des extraits |
 | `donnees_quiz.py` | les langues, pays et œuvres utilisés comme fausses propositions |
 | `jeu/*.html` | les pages : atelier, écran de jeu, téléphone |
 | `*.bat` / `*.command` | installation et lancement sur Windows / sur Mac |

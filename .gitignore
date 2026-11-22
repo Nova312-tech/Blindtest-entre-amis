@@ -19,3 +19,5 @@ _partie_en_cours.*
 fond.png
 fond.jpg
 countdown*.mp4
+build/
+dist/

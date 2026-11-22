@@ -2,7 +2,7 @@
 <html lang="fr">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#05061a">
 <title>Blind test</title>
 <style>
@@ -46,6 +46,8 @@
   .attente { width: 64px; height: 64px; margin: 8px auto; border-radius: 50%;
     border: 5px solid rgba(70, 210, 255, .2); border-top-color: var(--cyan); animation: tourne 1s linear infinite; }
   @keyframes tourne { to { transform: rotate(360deg); } }
+  #statutVote.erreur { color: #ff8fa8; }
+  #reessayerVote { width: auto; margin: 0 auto; padding: 12px 18px; font-size: 17px; }
   #erreur { color: #ff8fa8; min-height: 20px; }
   /* animateur : le premier inscrit pilote la partie depuis son téléphone */
   body.anime main { padding-bottom: calc(96px + env(safe-area-inset-bottom)); }
@@ -78,6 +80,56 @@
   .recap { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; text-align: left; }
   .recap div { background: rgba(255, 255, 255, .06); border-radius: 12px; padding: 10px 12px; font-size: 14px; color: var(--doux); }
   .recap b { display: block; font-size: 22px; color: var(--texte); }
+  .evolution { width: min(100%, 520px); margin: 8px auto 0; padding: 14px; border-radius: 14px;
+    background: rgba(255, 255, 255, .06); text-align: left; }
+  .evolution h2 { margin: 0 0 4px; color: var(--cyan); font-size: 14px; }
+  .evolution p { font-size: 12px; margin-bottom: 6px; }
+  .evolution svg { display: block; width: 100%; height: auto; overflow: visible; }
+  .evolution text { fill: var(--doux); font: 10px "Segoe UI", sans-serif; }
+  .evolution .grille { stroke: rgba(185, 195, 230, .2); stroke-width: 1; }
+  .evolution .courbe { fill: none; stroke: var(--cyan); stroke-width: 3; stroke-linejoin: round; stroke-linecap: round; }
+  .evolution .point { fill: var(--cyan); stroke: #05061a; stroke-width: 1.5; }
+  #zoneQuestion { flex: 1; min-height: 0; display: flex; flex-direction: column; position: relative; }
+  #choixZone { flex: 1; min-height: 0; display: flex; flex-direction: column; position: relative; }
+  #malusAnnonce { color: #ffd77a; font-size: 14px; font-weight: 800; text-align: center; min-height: 0; }
+  #malusAnnonce:empty { display: none; }
+  #voileBrouillard, #effetTomate, #rideauCinema { position: absolute; inset: 0; pointer-events: none; }
+  #voileBrouillard { z-index: 4; background: rgba(220, 232, 255, .48); backdrop-filter: blur(10px);
+    animation: dissiper 8s ease-out 2s both; }
+  @keyframes dissiper { 0%, 20% { opacity: 1; backdrop-filter: blur(12px); } 100% { opacity: 0; backdrop-filter: blur(0); } }
+  #effetTomate { z-index: 5; overflow: hidden; animation: tomatePasse 8s ease-out 2s both; }
+  #effetTomate .eclaboussure { position: absolute; left: 4%; top: 24%; width: 92%; height: 46%;
+    border-radius: 42% 58% 64% 36% / 52% 36% 64% 48%; transform: rotate(-12deg);
+    background: rgba(232, 72, 65, .88); box-shadow: 0 0 0 10px rgba(255, 130, 76, .58), 0 0 0 22px rgba(232, 72, 65, .25); }
+  #effetTomate .emojiTomate { position: absolute; left: 12%; top: 16%; font-size: 72px;
+    filter: drop-shadow(0 6px 5px rgba(0, 0, 0, .45)); animation: tomateVole 8s ease-out 2s both; }
+  @keyframes tomatePasse { 0%, 20% { opacity: 0; } 25%, 72% { opacity: .96; } 100% { opacity: 0; } }
+  @keyframes tomateVole { 0% { transform: translate(-45vw, -30vh) rotate(-180deg) scale(.5); }
+    25% { transform: translate(20vw, 4vh) rotate(25deg) scale(1.15); }
+    72% { transform: translate(50vw, 12vh) rotate(150deg) scale(.85); }
+    100% { transform: translate(85vw, 22vh) rotate(250deg) scale(.65); } }
+  #rideauCinema { z-index: 7; display: flex; }
+  #rideauCinema span { width: 50%; background: repeating-linear-gradient(90deg, #771a39 0 18px, #9c2444 18px 36px);
+    box-shadow: inset 0 0 30px rgba(0, 0, 0, .45); }
+  #rideauCinema span:first-child { transform-origin: left; animation: rideauGauche 8s ease-in-out 2s both; }
+  #rideauCinema span:last-child { transform-origin: right; animation: rideauDroite 8s ease-in-out 2s both; }
+  @keyframes rideauGauche { 0%, 25% { transform: scaleX(1); } 100% { transform: scaleX(0); } }
+  @keyframes rideauDroite { 0%, 25% { transform: scaleX(1); } 100% { transform: scaleX(0); } }
+  @media (prefers-reduced-motion: reduce) {
+    #voileBrouillard, #effetTomate, #effetTomate .emojiTomate, #rideauCinema span {
+      animation-duration: .01ms !important; animation-iteration-count: 1 !important;
+    }
+  }
+  .pouvoir { width: min(100%, 520px); margin: 8px auto 0; padding: 12px; border-radius: 14px;
+    background: rgba(199, 162, 255, .12); border: 1px solid rgba(199, 162, 255, .3); }
+  .pouvoir h2 { font-size: 16px; margin: 0 0 6px; color: var(--violet); }
+  .pouvoir p { font-size: 14px; margin: 4px 0 8px; }
+  .pouvoirChoix, .pouvoirCibles { display: flex; flex-wrap: wrap; gap: 7px; justify-content: center; }
+  .pouvoir button { border: 1px solid rgba(255,255,255,.25); border-radius: 10px; padding: 9px 10px;
+    color: var(--texte); background: rgba(255,255,255,.1); font: inherit; font-size: 14px; font-weight: 700; }
+  .pouvoir button.selectionne { border-color: var(--cyan); background: rgba(70,210,255,.2); }
+  .pouvoir button:disabled { opacity: .55; }
+  #pouvoirStatut { min-height: 0; margin-top: 7px; color: #ffd77a; font-size: 13px; }
 </style>
 </head>
 <body>
@@ -103,29 +155,37 @@
     <div id="choixEquipe" hidden><p>Ton équipe (touche pour changer) :</p><div class="equipes" id="equipes"></div></div>
   </section>
 
-  <section id="vote" hidden style="flex:1;display:flex;flex-direction:column">
+  <section id="vote" hidden style="flex:1;display:flex;flex-direction:column;position:relative">
     <div class="etiquette" style="text-align:center;margin-top:8px">Question <span id="numero"></span> — à toi de jouer !</div>
     <div id="consigneTel" style="text-align:center;font-size:22px;font-weight:900;color:var(--violet);margin-top:6px"></div>
     <div class="double" id="doubleTel" hidden>×2 POINTS</div>
-    <div class="choix" id="boutons"></div>
-    <div id="annee" hidden>
-      <div id="anneeValeur">2000</div>
-      <input type="range" id="anneeCurseur" min="1940" max="2026" value="2000" aria-label="Année">
-      <div class="pas"><button data-pas="-10">−10</button><button data-pas="-1">−1</button><button data-pas="1">+1</button><button data-pas="10">+10</button></div>
-      <button class="principal" id="anneeValider">Valider cette année</button>
+    <div id="malusAnnonce" role="status" aria-live="polite"></div>
+    <div id="zoneQuestion">
+      <div id="choixZone"><div class="choix" id="boutons"></div></div>
+      <div id="annee" hidden>
+        <div id="anneeValeur">2000</div>
+        <input type="range" id="anneeCurseur" min="1940" max="2026" value="2000" aria-label="Année">
+        <div class="pas"><button data-pas="-10">−10</button><button data-pas="-1">−1</button><button data-pas="1">+1</button><button data-pas="10">+10</button></div>
+        <button class="principal" id="anneeValider">Valider cette année</button>
+      </div>
+      <div id="voileBrouillard" aria-hidden="true" hidden></div>
+      <div id="effetTomate" aria-hidden="true" hidden><span class="eclaboussure"></span><span class="emojiTomate">🍅</span></div>
+      <div id="rideauCinema" aria-hidden="true" hidden><span></span><span></span></div>
     </div>
   </section>
 
   <section class="ecran" id="envoye" hidden>
-    <h1>Réponse envoyée ✔</h1>
-    <div class="attente"></div>
-    <p>Attends la fin de l'extrait…</p>
+    <h1 id="statutVote" role="status" aria-live="polite">Envoi en cours…</h1>
+    <div class="attente" id="attenteVote"></div>
+    <p id="texteVote">Le jeu confirme la réception.</p>
+    <button class="principal" id="reessayerVote" type="button" hidden>Réessayer l'envoi</button>
   </section>
 
   <section class="ecran" id="resultat" hidden>
     <img class="pochetteTel" id="pochetteTel" alt="" hidden>
     <div class="verdict" id="verdict"></div>
     <p class="rang" id="rang"></p>
+    <section class="pouvoir" id="pouvoirZone" hidden></section>
   </section>
 
   <section class="ecran" id="fin" hidden>
@@ -134,14 +194,26 @@
     <p class="rang" id="finRang"></p>
     <p id="finEquipe" class="bonus"></p>
     <div class="recap" id="recap"></div>
+    <section class="evolution" aria-labelledby="titreEvolution">
+      <h2 id="titreEvolution">Évolution de ton score</h2>
+      <p>Points cumulés après chaque question</p>
+      <div id="graphiqueScore"></div>
+    </section>
   </section>
 </main>
 
 <script>
 const $ = (id) => document.getElementById(id);
 const LETTRES = ["A", "B", "C", "D"];
-let jeton = null, partieId = null, flux = null, dejaVote = null, vibre = null, minuteurs = [], anneeQuestion = null;
+let jeton = null, partieId = null, flux = null, dejaVote = null, voteEnCours = null, questionCourante = null;
+let phaseCourante = null, effetVisuelCle = null, ordreChoixCle = null, ordreChoix = null, pouvoirSelectionne = null;
+let pouvoirEnCours = false;
+let vibre = null, minuteurs = [], anneeQuestion = null;
 const NOMS_EQ = ["Rouges", "Bleus", "Jaunes", "Verts"], COULEURS_EQ = ["#e5486b", "#3f8cff", "#f2b632", "#2fbf71"];
+const NOMS_POUVOIR = {
+  lettres_lentes: "Révélation au ralenti", tomate: "Tomate à l’écran", brouillard: "Brouillard",
+  ecran_cinema: "Petit écran de cinéma"
+};
 const virgule = (x) => String(x).replace(".", ",");
 const lire = (k) => { try { return localStorage.getItem(k); } catch { return null; } };
 const ecrire = (k, v) => { try { localStorage.setItem(k, v); } catch {} };
@@ -149,6 +221,123 @@ function echapper(t) { const d = document.createElement("div"); d.textContent = 
 function montrer(nom) {
   for (const s of ["inscription", "salle", "vote", "envoye", "resultat", "fin"]) $(s).hidden = s !== nom;
   $("entete").hidden = nom === "inscription";
+}
+function afficherVoteConfirme() {
+  $("statutVote").textContent = "Réponse envoyée ✔";
+  $("statutVote").classList.remove("erreur");
+  $("attenteVote").hidden = false;
+  $("texteVote").textContent = "Le jeu a bien reçu ta réponse. Attends la fin de l'extrait…";
+  $("reessayerVote").hidden = true;
+  montrer("envoye");
+}
+function afficherEffetVisuel(malus, cleQ) {
+  if (effetVisuelCle === cleQ) return;
+  effetVisuelCle = cleQ;
+  $("voileBrouillard").hidden = true;
+  $("effetTomate").hidden = true;
+  $("rideauCinema").hidden = true;
+  $("malusAnnonce").textContent = malus ? `${malus.nom} !` : "";
+  if (malus?.id === "brouillard") $("voileBrouillard").hidden = false;
+  if (malus?.id === "tomate") $("effetTomate").hidden = false;
+  if (malus?.id === "ecran_cinema") $("rideauCinema").hidden = false;
+}
+function afficherPouvoirs(e, moi) {
+  const zone = $("pouvoirZone");
+  const dernier = moi.dernier || {};
+  if (e.phase !== "resultats") {
+    zone.hidden = true;
+    pouvoirSelectionne = null;
+    return;
+  }
+  zone.hidden = false;
+  if (moi.pouvoir_utilise) {
+    zone.innerHTML = `<h2>✅ Pouvoir envoyé</h2><p>${echapper(moi.pouvoir_utilise.nom)} envoyé à ${echapper(moi.pouvoir_utilise.cible)} pour la prochaine question.</p>`;
+    pouvoirSelectionne = null;
+    return;
+  }
+  if (!moi.pouvoir_charge && !dernier.pouvoir_gagne) {
+    zone.hidden = true;
+    pouvoirSelectionne = null;
+    return;
+  }
+  if (!moi.pouvoir_charge) {
+    zone.innerHTML = "<h2>🪄 Pouvoir de rattrapage gagné !</h2><p>Deux réponses manquées de suite : tu pourras viser un adversaire après la prochaine question.</p>";
+    return;
+  }
+  const pouvoirs = moi.pouvoirs || [];
+  const cibles = moi.cibles || [];
+  if (!pouvoirs.some((p) => p.id === pouvoirSelectionne)) pouvoirSelectionne = null;
+  zone.innerHTML = `<h2>🪄 Choisis un malus pour la prochaine question</h2>
+    <p>${dernier.pouvoir_gagne ? "Deux réponses manquées de suite : tu gagnes un pouvoir !" : "Tu as gardé un pouvoir de rattrapage."}</p>
+    <div class="pouvoirChoix">${pouvoirs.map((p) => `<button type="button" data-pouvoir="${echapper(p.id)}"
+      class="${p.id === pouvoirSelectionne ? "selectionne" : ""}" title="${echapper(p.description)}">${echapper(p.icone)} ${echapper(p.nom)}</button>`).join("")}</div>
+    <p>${pouvoirSelectionne ? "Puis choisis un adversaire :" : "Sélectionne un malus :"}</p>
+    <div class="pouvoirCibles">${pouvoirSelectionne ? cibles.map((c) =>
+      `<button type="button" data-cible="${echapper(c.jeton)}">${echapper(c.pseudo)}</button>`).join("") : ""}</div>
+    <p id="pouvoirStatut" role="status" aria-live="polite">${cibles.length ? "" : "Aucun adversaire disponible pour cette question."}</p>`;
+  for (const bouton of zone.querySelectorAll("[data-pouvoir]")) {
+    bouton.onclick = () => {
+      pouvoirSelectionne = bouton.dataset.pouvoir;
+      afficherPouvoirs(e, moi);
+    };
+  }
+  for (const bouton of zone.querySelectorAll("[data-cible]")) {
+    bouton.onclick = () => envoyerPouvoir(bouton.dataset.cible);
+  }
+}
+async function envoyerPouvoir(cible) {
+  const statut = $("pouvoirStatut");
+  const adversaire = [...$("pouvoirZone").querySelectorAll("[data-cible]")]
+    .find((bouton) => bouton.dataset.cible === cible)?.textContent || "l’adversaire";
+  if (pouvoirEnCours || !pouvoirSelectionne) return;
+  pouvoirEnCours = true;
+  for (const bouton of $("pouvoirZone").querySelectorAll("button")) bouton.disabled = true;
+  statut.textContent = "Envoi du pouvoir…";
+  try {
+    const reponse = await fetch("/pouvoir", { method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ jeton, pouvoir: pouvoirSelectionne, cible }) });
+    const resultat = await reponse.json();
+    if (!reponse.ok || !resultat.ok) throw new Error(resultat.erreur || "Le pouvoir n’a pas pu être envoyé.");
+    statut.textContent = `Pouvoir envoyé à ${adversaire} !`;
+    pouvoirSelectionne = null;
+  } catch (erreur) {
+    statut.textContent = `Échec : ${erreur.message}`;
+    for (const bouton of $("pouvoirZone").querySelectorAll("button")) bouton.disabled = false;
+  } finally {
+    pouvoirEnCours = false;
+  }
+}
+function dessinerEvolution(points) {
+  const zone = $("graphiqueScore");
+  if (!Array.isArray(points) || points.length < 2) {
+    zone.textContent = "Courbe indisponible pour cette partie.";
+    return;
+  }
+  const valeurs = points.map((p) => ({ numero: Number(p.numero), score: Number(p.score) }))
+    .filter((p) => Number.isInteger(p.numero) && Number.isFinite(p.score) && p.score >= 0);
+  if (valeurs.length < 2) {
+    zone.textContent = "Courbe indisponible pour cette partie.";
+    return;
+  }
+  const gauche = 42, droite = 350, haut = 18, bas = 128;
+  const maximum = Math.max(1000, Math.ceil(Math.max(...valeurs.map((p) => p.score)) / 1000) * 1000);
+  const x = (i) => gauche + (droite - gauche) * i / (valeurs.length - 1);
+  const y = (score) => bas - (bas - haut) * score / maximum;
+  const pas = Math.ceil((valeurs.length - 1) / 4);
+  const etiquettes = valeurs.filter((p, i) => i === 0 || i === valeurs.length - 1 || i % pas === 0);
+  const grille = [0, maximum / 2, maximum].map((score) =>
+    `<line class="grille" x1="${gauche}" y1="${y(score)}" x2="${droite}" y2="${y(score)}"></line>
+     <text x="${gauche - 6}" y="${y(score) + 3}" text-anchor="end">${Math.round(score).toLocaleString("fr-FR")}</text>`).join("");
+  const ticks = etiquettes.map((p) => {
+    const index = valeurs.indexOf(p);
+    return `<text x="${x(index)}" y="${bas + 17}" text-anchor="middle">${p.numero || "Départ"}</text>`;
+  }).join("");
+  const ligne = valeurs.map((p, i) => `${x(i)},${y(p.score)}`).join(" ");
+  const pointsSvg = valeurs.map((p, i) =>
+    `<circle class="point" cx="${x(i)}" cy="${y(p.score)}" r="3"><title>Question ${p.numero} : ${p.score.toLocaleString("fr-FR")} points</title></circle>`).join("");
+  zone.innerHTML = `<svg viewBox="0 0 360 158" role="img" aria-label="Progression du score de 0 à ${valeurs[valeurs.length - 1].score} points sur ${valeurs[valeurs.length - 1].numero} questions">
+    <g>${grille}</g><polyline class="courbe" points="${ligne}"></polyline><g>${pointsSvg}</g><g>${ticks}</g>
+    <text x="350" y="154" text-anchor="end">Question</text></svg>`;
 }
 function ordinal(n) { return n === 1 ? "1er" : `${n}e`; }
 
@@ -194,11 +383,13 @@ function ecouter() {
 }
 
 function rendre(e) {
+  phaseCourante = e.phase;
   if (e.moi === null) {                                 // partie redémarrée : on se réinscrit
     jeton = null; ecrire("bt_jeton", ""); montrer("inscription"); tour++; return;
   }
   const moi = e.moi;
   minuteurs.forEach((id) => { clearTimeout(id); clearInterval(id); }); minuteurs = [];
+  afficherPouvoirs(e, moi);
   barreAnimateur(e, moi);
   $("pseudo").innerHTML = (moi.equipe !== null && moi.equipe !== undefined
     ? `<span style="display:inline-block;width:12px;height:12px;border-radius:50%;background:${COULEURS_EQ[moi.equipe]};margin-right:6px"></span>` : "")
@@ -220,7 +411,15 @@ function rendre(e) {
     montrer("salle");
   } else if (e.phase === "question") {
     const cleQ = `${e.manche}-${e.numero}`;            // une question 1 d'une nouvelle partie n'est pas l'ancienne
-    if (moi.a_vote || dejaVote === cleQ) { montrer("envoye"); return; }
+    questionCourante = cleQ;
+    afficherEffetVisuel(moi.malus, cleQ);
+    if (moi.a_vote) {
+      dejaVote = cleQ;
+      voteEnCours = null;
+      afficherVoteConfirme();
+      return;
+    }
+    if (dejaVote === cleQ) { afficherVoteConfirme(); return; }
     $("numero").textContent = `${e.numero} / ${e.total}`;
     $("consigneTel").textContent = e.pause ? "⏸ Pause : attends la reprise" : (e.consigne || "");
     $("consigneTel").hidden = !e.consigne && !e.pause;
@@ -234,21 +433,29 @@ function rendre(e) {
       montrer("vote");
       return;
     }
-    $("boutons").innerHTML = e.choix.map((c, i) => `
-      <button class="c${i}" data-i="${i}"><span class="lettre">${LETTRES[i]}</span>
-        <span><span class="t">${echapper(e.forme === "meme_titre" ? c.artiste : c.titre)}</span><span class="artiste">${echapper(e.forme === "meme_titre" ? c.titre : c.artiste)}</span></span></button>`).join("");
+    if (ordreChoixCle !== cleQ) {
+      ordreChoixCle = cleQ;
+      ordreChoix = e.choix.map((_, i) => i);
+    }
+    $("boutons").innerHTML = ordreChoix.map((i, position) => {
+      const c = e.choix[i];
+      return `<button class="c${position}" data-i="${i}"><span class="lettre">${LETTRES[position]}</span>
+        <span><span class="t">${echapper(e.forme === "meme_titre" ? c.artiste : c.titre)}</span><span class="artiste">${echapper(e.forme === "meme_titre" ? c.titre : c.artiste)}</span></span></button>`;
+    }).join("");
     for (const b of $("boutons").querySelectorAll("button")) {
       b.onclick = () => voter(cleQ, +b.dataset.i);
       b.disabled = !!e.pause;
       b.style.opacity = e.pause ? ".4" : "";
     }
-    if (e.lettres) {                                    // lettre par lettre : on peut répondre à tout moment
+    const dureeLettres = moi.malus?.id === "lettres_lentes"
+      ? Math.min(e.duree, Math.max(e.lettres || 0, Math.min(14, Math.max(8, e.duree * 0.85)))) : e.lettres;
+    if (dureeLettres) {                                 // lettre par lettre : on peut répondre à tout moment
       const champs = $("boutons").querySelectorAll(".t, .artiste"), recu = performance.now();
       champs.forEach((x) => { x.dataset.plein = x.textContent; });
       const ecrire = () => {
         const ecoule = e.duree - e.reste_ms / 1000 + (e.pause ? 0 : (performance.now() - recu) / 1000);
-        champs.forEach((x) => { const t = masquer(x.dataset.plein, ecoule / e.lettres); if (x.textContent !== t) x.textContent = t; });
-        return ecoule < e.lettres;
+        champs.forEach((x) => { const t = masquer(x.dataset.plein, ecoule / dureeLettres); if (x.textContent !== t) x.textContent = t; });
+        return ecoule < dureeLettres;
       };
       if (ecrire() && !e.pause) { const id = setInterval(() => { if (!ecrire()) clearInterval(id); }, 100); minuteurs.push(id); }
     }
@@ -260,6 +467,7 @@ function rendre(e) {
       d.double && d.gain ? "×2 points !" : "",
       d.bonus ? `🔥 Série de ${d.serie} : +${d.bonus}` : "",
       d.plus_rapide ? "⚡ Tu as été le plus rapide !" : "",
+      d.malus ? `🎭 Malus subi : ${NOMS_POUVOIR[d.malus] || "effet surprise"}` : "",
     ].filter(Boolean).map((x) => `<div class="bonus">${x}</div>`).join("");
     $("pochetteTel").hidden = !e.pochette;
     if (e.pochette) $("pochetteTel").src = e.pochette;
@@ -287,6 +495,7 @@ function rendre(e) {
       <div>Meilleure série<b>${bl.serie_max ? bl.serie_max + " 🔥" : "—"}</b></div>
       <div>Réponse la plus rapide<b>${bl.plus_rapide !== null && bl.plus_rapide !== undefined ? virgule(bl.plus_rapide) + " s" : "—"}</b></div>
       <div>Points<b>${moi.score.toLocaleString("fr-FR")}</b></div>`;
+    dessinerEvolution(moi.evolution);
     montrer("fin");
   }
 }
@@ -337,14 +546,41 @@ function reglerAnnee(v) {
 $("anneeCurseur").oninput = () => reglerAnnee(+$("anneeCurseur").value);
 for (const b of document.querySelectorAll(".pas button")) b.onclick = () => reglerAnnee(+$("anneeCurseur").value + +b.dataset.pas);
 
-async function voter(numero, i) {
-  dejaVote = numero; montrer("envoye");
-  if (navigator.vibrate) navigator.vibrate(30);
+async function envoyerVote(vote) {
+  if (vote.enCours) return;
+  vote.enCours = true;
+  $("statutVote").textContent = "Envoi de ta réponse…";
+  $("statutVote").classList.remove("erreur");
+  $("attenteVote").hidden = false;
+  $("texteVote").textContent = "Le jeu confirme la réception.";
+  $("reessayerVote").hidden = true;
+  montrer("envoye");
   try {
-    await fetch("/voter", { method: "POST", headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ jeton, choix: i }) });
-  } catch {}
+    const r = await fetch("/voter", { method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ jeton, choix: vote.choix }) });
+    const d = await r.json();
+    if (!r.ok || !d.ok) throw new Error(d.erreur || "Le jeu n'a pas confirmé ta réponse.");
+    dejaVote = vote.numero;
+    if (questionCourante === vote.numero && phaseCourante === "question") afficherVoteConfirme();
+    voteEnCours = null;
+    if (navigator.vibrate) navigator.vibrate(30);
+  } catch {
+    vote.enCours = false;
+    if (questionCourante !== vote.numero || phaseCourante !== "question") return;
+    $("statutVote").textContent = "Réponse non confirmée";
+    $("statutVote").classList.add("erreur");
+    $("attenteVote").hidden = true;
+    $("texteVote").textContent = "Vérifie le Wi-Fi ou Internet, puis réessaie.";
+    $("reessayerVote").hidden = false;
+    montrer("envoye");
+  }
 }
+async function voter(numero, choix) {
+  if (dejaVote === numero || (voteEnCours && voteEnCours.numero === numero)) return;
+  voteEnCours = { numero, choix, enCours: false };
+  await envoyerVote(voteEnCours);
+}
+$("reessayerVote").onclick = () => { if (voteEnCours) envoyerVote(voteEnCours); };
 
 $("rejoindre").onclick = async () => {
   const p = $("saisie").value.trim();

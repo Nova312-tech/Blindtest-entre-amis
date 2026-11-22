@@ -37,8 +37,6 @@
   .puces button:hover { border-color: var(--cyan); }
   .puces button[aria-pressed="true"] { background: var(--cyan); color: var(--fond); border-color: var(--cyan);
     box-shadow: 0 0 14px rgba(70, 210, 255, .45); }
-  .puces.usage button { flex: 1 1 140px; text-align: left; }
-  .puces.usage button small { display: block; font-weight: 500; font-size: 12px; opacity: .8; }
   input[type=number], input[type=text], textarea, select {
     font: 15px "Segoe UI", sans-serif; color: var(--texte); background: rgba(255, 255, 255, .06);
     border: 1px solid rgba(255, 255, 255, .18); border-radius: 10px; padding: 9px 11px; width: 100%; }
@@ -195,23 +193,25 @@
           <div class="detecte" id="detecte" aria-live="polite"></div>
         </div>
 
-        <div class="champ">
-          <span class="titre">C'est pour…</span>
-          <div class="puces usage" id="usages" role="group" aria-label="Usage">
-            <button type="button" data-usage="quiz">Quiz sur téléphones<small>son seul + 4 propositions</small></button>
-            <button type="button" data-usage="video">Vidéo YouTube<small>montage complet</small></button>
-            <button type="button" data-usage="les_deux">Les deux<small>plus long</small></button>
+        <div class="alerte">
+          <b>Avant de créer le quizz</b><br>
+          La recherche des titres et le téléchargement des extraits nécessitent Internet sur ce PC.
+          Les joueurs pourront ensuite rejoindre le quizz sur le même Wi-Fi, ou via Internet si vous activez cette option.
+          <div class="actions">
+            <button class="bouton discret petit" id="testerConnexion" type="button">Tester la connexion Internet</button>
+            <span id="etatConnexion" role="status" aria-live="polite">Connexion non testée.</span>
+          </div>
+          <div class="actions">
+            <button class="bouton discret petit" id="testerSon" type="button">Tester le son</button>
+            <span id="etatSon" role="status" aria-live="polite">Vérifiez que le son de l'écran est audible.</span>
           </div>
         </div>
+        <div class="aide">Les extraits audio et les questions seront préparés pour le quizz sur téléphones. La première préparation peut prendre quelques minutes.</div>
 
         <div class="champ ligne">
           <div>
             <label for="nombre">Nombre d'extraits</label>
             <input type="number" id="nombre" min="1" max="200" step="1">
-          </div>
-          <div id="blocNom" hidden style="flex:1;min-width:180px">
-            <label for="nom">Nom de la vidéo</label>
-            <input type="text" id="nom" maxlength="80" placeholder="blindtest">
           </div>
         </div>
 
@@ -243,7 +243,7 @@
           <button class="bouton discret" id="fabriquer" type="button" style="flex:1 1 160px">Fabriquer directement</button>
         </div>
         <div class="erreurForm" id="erreurForm" role="alert"></div>
-        <div class="aide">« Voir la sélection » montre les titres retenus (à écouter, à retirer) avant de fabriquer : quelques secondes, jusqu'à 2 min la première fois pour un thème en langue étrangère. La fabrication prend ensuite 1 à 4 minutes, plus 5 à 10 minutes si la vidéo est montée. Vous pouvez fermer cet onglet : tout continue tant que la fenêtre « Blind test » reste ouverte.</div>
+        <div class="aide">« Voir la sélection » montre les titres retenus (à écouter, à retirer) avant de fabriquer. La fabrication prend ensuite quelques minutes. Vous pouvez fermer cet onglet : l'application continue en arrière-plan. Pour tout arrêter, utilisez « Quitter » en haut de cette page.</div>
       </form>
     </section>
 
@@ -319,7 +319,6 @@
   <div id="edListe"></div>
   <div class="barreActions" style="margin-left:-18px;margin-right:-18px;padding:12px 18px 14px">
     <button class="bouton" id="edEnregistrer" type="button">Enregistrer</button>
-    <button class="bouton discret" id="edVideo" type="button" hidden></button>
     <span class="petitgris" id="edEtat"></span>
   </div>
   <audio id="edSon" preload="none"></audio>
@@ -339,7 +338,7 @@ const esc = (t) => { const d = document.createElement("div"); d.textContent = t 
 const url = (chemin, params = {}) => `${chemin}?${new URLSearchParams({ cle, ...params })}`;
 
 let E = null;                          // dernier état reçu du serveur
-let duree = null, usage = null, nombreManuel = false, dernierLots = "", dernierePartie = "", lotAJouer = null;
+let duree = null, nombreManuel = false, dernierLots = "", dernierePartie = "", lotAJouer = null;
 
 async function poster(chemin, corps) {
   const r = await fetch(url(chemin), { method: "POST", headers: { "Content-Type": "application/json" },
@@ -348,6 +347,42 @@ async function poster(chemin, corps) {
   if (!r.ok) throw new Error(d.erreur || "Action impossible.");
   return d;
 }
+
+$("testerConnexion").onclick = async () => {
+  const bouton = $("testerConnexion"), etat = $("etatConnexion");
+  bouton.disabled = true;
+  etat.textContent = "Test de l'accès à Deezer…";
+  try {
+    await poster("/atelier/connexion", {});
+    etat.textContent = "Connexion Internet et accès à Deezer opérationnels.";
+  } catch (e) {
+    etat.textContent = `Test impossible : ${e.message}`;
+  } finally {
+    bouton.disabled = false;
+  }
+};
+
+$("testerSon").onclick = async () => {
+  const AudioContext = window.AudioContext || window.webkitAudioContext;
+  const etat = $("etatSon");
+  if (!AudioContext) { etat.textContent = "Ce navigateur ne permet pas de tester le son ici."; return; }
+  let contexte;
+  try {
+    contexte = new AudioContext();
+    await contexte.resume();
+    const oscillateur = contexte.createOscillator(), volume = contexte.createGain();
+    oscillateur.frequency.value = 440;
+    volume.gain.setValueAtTime(0.12, contexte.currentTime);
+    volume.gain.exponentialRampToValueAtTime(0.001, contexte.currentTime + 0.6);
+    oscillateur.connect(volume); volume.connect(contexte.destination);
+    oscillateur.onended = () => contexte.close();
+    oscillateur.start(); oscillateur.stop(contexte.currentTime + 0.6);
+    etat.textContent = "Bip de test lancé : si vous l'entendez, le son du navigateur fonctionne.";
+  } catch (e) {
+    if (contexte) await contexte.close();
+    etat.textContent = `Test audio impossible : ${e.message}`;
+  }
+};
 
 // ---------- formulaire ----------
 function nombreParDefaut(d) {
@@ -405,23 +440,15 @@ function majSource() {
 }
 $("source").oninput = majSource;
 
-for (const b of $("usages").querySelectorAll("button")) b.onclick = () => {
-  usage = b.dataset.usage;
-  for (const x of $("usages").querySelectorAll("button")) x.setAttribute("aria-pressed", x === b);
-  $("blocNom").hidden = usage === "quiz";
-  $("erreurForm").textContent = "";
-};
-
 const errForm = (m) => { $("erreurForm").textContent = m; };
-function valeursForm(avecUsage) {
+function valeursForm() {
   const d = detecter($("source").value);
   if (!duree) throw new Error(`Choisissez un temps pour deviner (${E.duree_min} à ${E.duree_max} s).`);
   if (!d) { $("source").focus(); throw new Error("Indiquez un thème, un lien de playlist ou une liste de titres."); }
   if (d.type === "erreur") throw new Error(d.texte);
-  if (avecUsage && !usage) throw new Error("Indiquez si c'est pour le quiz, pour la vidéo, ou les deux.");
   const nombre = +$("nombre").value;
   if (!(nombre >= 1 && nombre <= 200)) throw new Error("Le nombre d'extraits doit être compris entre 1 et 200.");
-  return { duree, nombre, source: $("source").value, usage, nom: $("nom").value,
+  return { duree, nombre, source: $("source").value,
     debut: $("blocDebut").hidden ? 0 : +$("debut").value || 0, oeuvre: $("oeuvre").value,
     melanger: !$("blocMelanger").hidden && $("melanger").checked, essai: $("essai").checked };
 }
@@ -435,11 +462,11 @@ async function envoyer(chemin, corps) {
 }
 $("form").onsubmit = (ev) => {                       // « Voir la sélection »
   ev.preventDefault();
-  let v; try { v = valeursForm(false); } catch (e) { return errForm(e.message); }
+  let v; try { v = valeursForm(); } catch (e) { return errForm(e.message); }
   envoyer("/atelier/apercu", v);
 };
 $("fabriquer").onclick = () => {
-  let v; try { v = valeursForm(true); } catch (e) { return errForm(e.message); }
+  let v; try { v = valeursForm(); } catch (e) { return errForm(e.message); }
   envoyer("/atelier/fabriquer", v);
 };
 
@@ -448,10 +475,9 @@ const ETAPES = [
   [/^Recherche de playlists|^Lecture de la playlist|^Recherche de \d+ titres/, "Recherche des titres"],
   [/^Téléchargement et découpe/, "Téléchargement et découpe des extraits"],
   [/^Recherche des œuvres/, "Recherche des œuvres (film, spectacle…)"],
-  [/^Montage de la vidéo/, "Montage de la vidéo YouTube"],
-  [/^Préparation des 4 propositions/, "Préparation du quiz (4 propositions par question)"],
+  [/^Préparation des 4 propositions/, "Préparation du quizz (4 propositions par question)"],
   [/^Vérification de la langue/, "Vérification de la langue des artistes (MusicBrainz)"],
-  [/^Mise à jour du quiz/, "Mise à jour du quiz"],
+  [/^Mise à jour du quizz/, "Mise à jour du quizz"],
   [/^Téléchargement et découpe de « /, "Nouvel extrait"],
   [/^Ouverture de l'accès Internet/, "Ouverture de l'accès Internet"],
   [/^Pochettes des albums/, "Pochettes des albums"],
@@ -505,7 +531,7 @@ function rendreFabrication() {
     const r = t.resultat || {};
     if (r.apercu) chargerApercu(r.apercu);
     // rechargé seulement s'il n'y a pas de corrections en cours de saisie (elles seraient perdues)
-    if (editeur.lot && (r.remplace || /^Mise à jour du quiz/.test(t.nom)) && $("dEditeur").open
+    if (editeur.lot && (r.remplace || /^Mise à jour du quizz/.test(t.nom)) && $("dEditeur").open
         && !lignesModifiees().length) chargerEditeur(editeur.lot, true);
   }
 }
@@ -521,10 +547,6 @@ function bilan(t) {
     return `<div class="bilan ok"><b>Question ${String(r.remplace).padStart(2, "0")} remplacée</b><div>${esc(r.texte)}</div>
       <div class="actions"><button class="bouton discret petit" data-action="editer" data-lot="${esc(r.lot)}">Revenir aux réponses</button></div></div>`;
   }
-  if (r.video && r.nombre === undefined) {
-    return `<div class="bilan ok"><b>Vidéo prête</b><div>${esc(r.video)}</div>
-      <div class="actions"><button class="bouton discret petit" data-action="dossier" data-lot="${esc(r.lot)}">Ouvrir le dossier</button></div></div>`;
-  }
   if (r.lot && r.nombre === undefined && !r.url_ecran) {   // essai gardé
     return `<div class="bilan ok"><b>C'est maintenant le blind test officiel</b>${r.archive ? `<div class="aide">L'ancien est rangé dans les archives (« ${esc(r.archive)} »).</div>` : ""}</div>`;
   }
@@ -535,9 +557,9 @@ function bilan(t) {
   }
   const lot = E.lots.find((l) => l.id === r.lot);
   let h = `<div class="bilan ok"><b>${r.nombre} extraits prêts</b>${r.nombre < r.demandes ? ` <span style="color:#ffd77a">(sur ${r.demandes} demandés : pas assez de titres disponibles)</span>` : ""}`;
-  h += `<div>Durée : ${duree_txt((t.fin || 0) - t.debut)}${r.video ? ` · vidéo : ${esc(r.video)}` : ""}${r.quiz ? " · quiz prêt" : ""}</div>`;
+  h += `<div>Durée : ${duree_txt((t.fin || 0) - t.debut)}${r.quiz ? " · quizz prêt" : ""}</div>`;
   if (r.archive) h += `<div class="aide">L'ancien blind test a été rangé dans les archives (« ${esc(r.archive)} »).</div>`;
-  if (r.a_verifier) h += `<div style="color:#ffd77a">${r.a_verifier} question(s) du quiz à vérifier.</div>`;
+  if (r.a_verifier) h += `<div style="color:#ffd77a">${r.a_verifier} question(s) du quizz à vérifier.</div>`;
   if (r.notes) h += `<div style="color:#ffd77a">${r.notes} remarque(s) dans les problèmes signalés.</div>`;
   h += `</div><div class="actions">`;
   if (r.quiz && lot) h += `<button class="bouton" data-action="jouer" data-lot="${esc(r.lot)}">Jouer maintenant</button>`;
@@ -601,14 +623,12 @@ function boutonsFichiers(l) {
 function ligneLot(l) {
   const enJeu = E.partie && E.partie.lot === l.id;
   const badges = [
-    l.quiz ? `<span class="badge vert">Quiz prêt</span>` : `<span class="badge gris">Quiz à préparer</span>`,
-    l.video ? `<span class="badge cyan">Vidéo</span>` : "",
-    l.video_perimee ? `<span class="badge jaune">Vidéo à refaire</span>` : "",
+    l.quiz ? `<span class="badge vert">Quizz prêt</span>` : `<span class="badge gris">Quizz à préparer</span>`,
     l.a_verifier ? `<span class="badge jaune">${l.a_verifier} à vérifier</span>` : "",
     enJeu ? `<span class="badge cyan">En jeu</span>` : "",
   ].join("");
   return `<li class="lot"><div><div class="nom">${esc(l.nom)}</div>
-    <div class="meta">${l.nombre} extraits de ${l.duree} s${l.date ? " · " + esc(l.date) : ""} · ${esc(l.dossier)}${l.video ? ` · vidéo « ${esc(l.video.replace(/\.mp4$/i, ""))} »` : ""}</div>
+    <div class="meta">${l.nombre} extraits de ${l.duree} s${l.date ? " · " + esc(l.date) : ""} · ${esc(l.dossier)}</div>
     <div class="badges">${badges}</div></div>
     <div class="actions" style="margin-top:0"><button class="bouton petit" data-action="jouer" data-lot="${esc(l.id)}">Jouer</button>${boutonsFichiers(l)}</div></li>`;
 }
@@ -644,7 +664,7 @@ function brancher(b) {
   };
   else if (b.dataset.action === "supprimer") b.onclick = () => {
     const l = E.lots.find((x) => x.id === lot) || {};
-    if (confirm(`Mettre « ${l.nom} » à la corbeille ? (récupérable depuis la corbeille)`))
+    if (confirm(`Mettre « ${l.nom} » à la corbeille ? (récupérable depuis la corbeille de Windows)`))
       poster("/atelier/lot/supprimer", { lot }).catch((e) => alert(e.message));
   };
   else if (b.dataset.action === "dossier") b.onclick = () => poster("/atelier/ouvrir", { lot }).catch((e) => alert(e.message));
@@ -685,7 +705,7 @@ function ouvrirJouer(lot, reprise = false) {
       : (E.internet ? "Accès Internet déjà ouvert : rien à rescanner." : "Ouvre un accès Internet temporaire (jusqu'à 1 min de préparation).");
   document.querySelector(`#formJouer input[value="${E.internet ? "internet" : "wifi"}"]`).checked = true;
   $("nouveauxChoix").checked = false;
-  $("jouerOk").textContent = reprise ? "Reprendre" : l.quiz ? "Lancer la partie" : "Préparer le quiz et lancer";
+  $("jouerOk").textContent = reprise ? "Reprendre" : l.quiz ? "Lancer la partie" : "Préparer le quizz et lancer";
   $("dJouer").showModal();
 }
 $("dJouer").addEventListener("close", async () => {
@@ -773,7 +793,7 @@ function rendreApercu() {
   if (AP.notes.length) h += `<details class="apBloc"><summary>Remarques (${AP.notes.length})</summary><ul class="listePl">`
     + AP.notes.map((x) => `<li>${esc(x)}</li>`).join("") + `</ul></details>`;
   h += `<div class="barreActions"><button class="bouton" id="apFabriquer" type="button">Fabriquer avec cette sélection</button>
-    <span class="petitgris">Avec les réglages du formulaire (quiz / vidéo, nom, essai…)</span><span class="erreurForm" id="apErreur" style="margin:0"></span></div>`;
+    <span class="petitgris">Avec les réglages du formulaire (quizz, essai…)</span><span class="erreurForm" id="apErreur" style="margin:0"></span></div>`;
   $("apercu").innerHTML = h;
   for (const c of $("apercu").querySelectorAll("input[data-cle]")) c.onchange = () => {
     if (c.checked) apRetires.delete(c.dataset.cle); else apRetires.add(c.dataset.cle);
@@ -785,15 +805,14 @@ function rendreApercu() {
   };
   for (const b of $("apercu").querySelectorAll(".lecture")) b.onclick = () => lire($("sonApercu"), b, b.dataset.src);
   if ($("apRecalculer")) $("apRecalculer").onclick = () => {
-    let v; try { v = valeursForm(false); } catch (e) { return ($("apErreur").textContent = e.message); }
+    let v; try { v = valeursForm(); } catch (e) { return ($("apErreur").textContent = e.message); }
     const deja = (AP.details.retirees || []).map((x) => String(x.id));
     envoyer("/atelier/apercu", { ...v, duree: AP.duree, nombre: AP.nombre, exclure_playlists: [...deja, ...apPlaylistsOff] });
   };
   $("apFabriquer").onclick = async () => {
-    if (!usage) { $("apErreur").textContent = "Indiquez dans le formulaire si c'est pour le quiz, la vidéo, ou les deux."; $("usages").scrollIntoView({ block: "center" }); return; }
     $("apErreur").textContent = "";
     try {
-      await poster("/atelier/fabriquer", { apercu: AP.id, retirer: [...apRetires], usage, nom: $("nom").value,
+      await poster("/atelier/fabriquer", { apercu: AP.id, retirer: [...apRetires],
         oeuvre: $("oeuvre").value, essai: $("essai").checked, duree: AP.duree, nombre: AP.nombre,
         debut: $("blocDebut").hidden ? 0 : +$("debut").value || 0 });
       $("sonApercu").pause();
@@ -808,7 +827,7 @@ $("fermerApercu").onclick = () => { $("sonApercu").pause(); $("secApercu").hidde
 // ---------- éditeur de réponses ----------
 const editeur = { lot: null, data: null };
 const CHAMPS_ED = (oeuvre) => oeuvre
-  ? [["oeuvre", "Œuvre (film, spectacle)"], ["titre", "Titre de la chanson"], ["interprete", "Interprète"], ["artiste", "Artiste (Deezer, pour le quiz)"]]
+  ? [["oeuvre", "Œuvre (film, spectacle)"], ["titre", "Titre de la chanson"], ["interprete", "Interprète"], ["artiste", "Artiste (Deezer, pour le quizz)"]]
   : [["artiste", "Artiste"], ["titre", "Titre"], ["note", "Indication (facultatif)"]];
 async function chargerEditeur(lot, garderMessage) {
   const r = await fetch(url("/atelier/lot", { lot }));
@@ -817,7 +836,7 @@ async function chargerEditeur(lot, garderMessage) {
   editeur.lot = lot; editeur.data = d;
   $("edNom").value = d.nom;
   $("edInfo").innerHTML = (d.en_jeu ? `<div class="alerte">Une partie est en cours avec ce blind test : terminez-la pour pouvoir le modifier (l'écoute reste possible).</div>` : "")
-    + `<div class="petitgris">${d.nombre} extraits de ${d.duree} s · ${esc(d.source)}. Après « Enregistrer », le quiz est mis à jour tout seul${d.video ? " ; la vidéo, elle, est à refaire (bouton en bas)" : ""}.</div>`;
+    + `<div class="petitgris">${d.nombre} extraits de ${d.duree} s · ${esc(d.source)}. Après « Enregistrer », le quizz est mis à jour tout seul.</div>`;
   const champs = CHAMPS_ED(d.mode_oeuvre);
   $("edListe").innerHTML = d.questions.map((q) => `
     <div class="edLigne" data-n="${q.n}">
@@ -835,8 +854,6 @@ async function chargerEditeur(lot, garderMessage) {
   for (const b of $("edListe").querySelectorAll(".lecture")) b.onclick = () =>
     lire($("edSon"), b, url("/atelier/audio", { lot, n: b.dataset.n, v: d.modifie }));
   for (const b of $("edListe").querySelectorAll("[data-remplacer]")) b.onclick = () => ouvrirRecherche(b.closest(".edLigne"));
-  $("edVideo").hidden = d.en_jeu;
-  $("edVideo").textContent = d.video ? (d.video_perimee ? "Refaire la vidéo (à jour des corrections)" : "Refaire la vidéo") : "Monter la vidéo";
   $("edEnregistrer").disabled = d.en_jeu;
   if (!garderMessage) $("edEtat").textContent = "";
   if (!$("dEditeur").open) $("dEditeur").showModal();
@@ -892,16 +909,9 @@ $("edEnregistrer").onclick = async () => {
     if (nom !== editeur.data.nom) await poster("/atelier/lot/renommer", { lot: editeur.lot, nom });
     const d = modifs.length ? await poster("/atelier/lot/modifier", { lot: editeur.lot, modifs }) : { modifiees: [] };
     $("edEtat").textContent = d.modifiees.length
-      ? `Enregistré : ${d.modifiees.length} réponse(s) corrigée(s). Le quiz se met à jour (voir « Fabrication »).`
+      ? `Enregistré : ${d.modifiees.length} réponse(s) corrigée(s). Le quizz se met à jour (voir « Fabrication »).`
       : (nom !== editeur.data.nom ? "Nom enregistré." : "Rien à enregistrer.");
     chargerEditeur(editeur.lot, true);
-  } catch (e) { $("edEtat").textContent = e.message; }
-};
-$("edVideo").onclick = async () => {
-  if (lignesModifiees().length && !confirm("Des corrections ne sont pas enregistrées : la vidéo sera montée sans elles. Continuer ?")) return;
-  try {
-    await poster("/atelier/lot/video", { lot: editeur.lot });
-    $("edEtat").textContent = "Montage de la vidéo lancé (5 à 10 min, voir « Fabrication »).";
   } catch (e) { $("edEtat").textContent = e.message; }
 };
 $("edFermer").onclick = () => {
@@ -916,7 +926,7 @@ async function boucle() {
   try {
     const r = await fetch(url("/atelier/etat", { version }), { cache: "no-store" });
     if (r.status === 403 || r.status === 404) {
-      $("deconnecte").textContent = "Cette page ne correspond plus au programme en cours : relancez « Blind test » (double-clic) et utilisez la nouvelle page.";
+      $("deconnecte").textContent = "Cette page ne correspond plus à l'application en cours : relancez « Blind test » et utilisez la nouvelle page.";
       $("deconnecte").hidden = false; return;
     }
     E = await r.json();
@@ -926,7 +936,7 @@ async function boucle() {
     rendreFabrication(); rendrePartie(); rendreLots(); rendreBoutons();
     boucle();
   } catch {
-    $("deconnecte").textContent = "Programme arrêté ou injoignable : la fenêtre « Blind test » est-elle ouverte ? Nouvel essai…";
+    $("deconnecte").textContent = "Application arrêtée ou injoignable : relancez « Blind test » si nécessaire. Nouvel essai…";
     $("deconnecte").hidden = false;
     setTimeout(boucle, 3000);
   }

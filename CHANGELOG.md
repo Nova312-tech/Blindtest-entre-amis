@@ -1,5 +1,15 @@
 # Nouveautés
 
+## Version 2.0.0
+
+- **Pouvoirs équilibrables** : après deux erreurs consécutives, un joueur peut choisir un adversaire et lui
+  transmettre un effet pour la question suivante.
+- **Effets disponibles** : révélation au ralenti, tomate, brouillard et rideau de cinéma.
+- **Suivi personnel** : graphique d'évolution du score sur le téléphone.
+- **Windows autonome** : scripts de compilation PyInstaller/Inno Setup, fichiers tiers intégrés et données
+  utilisateur dans `%LOCALAPPDATA%\BlindTest`.
+- **Fabrication dédiée au quiz** : les lots sont préparés pour le jeu sur téléphones.
+
 ## Version 1.1.0
 
 - **Compatible Mac** : `Installer (Mac).command` (Homebrew, Python, ffmpeg, raccourci sur le bureau) et

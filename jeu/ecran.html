@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Blind test — écran principal</title>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<script src="/qrcode.min.js"></script>
 <style>
   :root {
     --cyan: #46d2ff; --violet: #c7a2ff; --texte: #f4f6ff; --doux: #b9c3e6;
@@ -214,7 +214,7 @@
   </section>
 </main>
 <button id="activerSon" type="button" hidden>🔊 Cliquez ici une fois pour activer le son de l'écran</button>
-<div id="perdu" hidden>Connexion au programme perdue. La fenêtre « Blind test » est-elle toujours ouverte ? Reconnexion…</div>
+<div id="perdu" hidden>Connexion à l'application perdue. Vérifiez que Blind test est toujours lancé. Reconnexion…</div>
 <button id="pleinEcran" type="button" title="Plein écran (touche F)">⛶ Plein écran</button>
 <div id="petitQr" hidden><div id="petitQrCode"></div><span>Rejoindre</span></div>
 <audio id="son" preload="auto"></audio>
@@ -281,7 +281,7 @@ function confettis() {
 }
 function qr(el, texte, taille) {
   el.innerHTML = "";
-  if (typeof QRCode === "undefined") { el.textContent = "(QR code indisponible sans Internet)"; return; }
+  if (typeof QRCode === "undefined") { el.textContent = "(QR code indisponible : utilisez l'adresse et le code affichés)"; return; }
   new QRCode(el, { text: texte, width: taille, height: taille, correctLevel: QRCode.CorrectLevel.M });
 }
 

@@ -21,7 +21,6 @@ import random
 import re
 import secrets
 import shutil
-import signal
 import socket
 import subprocess
 import sys
@@ -41,7 +40,7 @@ from urllib.parse import parse_qs, urlparse
 import blindtest as bt
 import donnees_quiz as dq
 
-DOSSIER_PAGES = bt.BASE / "jeu"
+DOSSIER_PAGES = bt.RESOURCE_BASE / "jeu"
 POINTS_MAX, POINTS_MIN = 1000, 500          # bonne réponse : de 1000 (immédiate) à 500 (dernière seconde)
 PSEUDO_MAX = 16
 JOUEURS_MAX = 100
@@ -657,7 +656,7 @@ def actualiser_quiz(dossier, numeros):
     if not utilisable:
         return preparer_quiz(dossier, True) if all(c.get("id") for c in lot) else None
     numeros = sorted({n for n in numeros if 1 <= n <= len(lot)})
-    afficher(f"Mise à jour du quiz : question(s) {', '.join(f'{n:02d}' for n in numeros)}...")
+    afficher(f"Mise à jour du quizz : question(s) {', '.join(f'{n:02d}' for n in numeros)}...")
     res = Ressources()
     oeuvres_lot = {c["oeuvre"] for c in lot if c.get("oeuvre")}
     try:
@@ -675,7 +674,7 @@ def actualiser_quiz(dossier, numeros):
     res.profil.enregistrer()
     quiz["empreinte"] = [c.get("id") for c in lot]
     ecrire_quiz(dossier, quiz, a_verifier)
-    afficher("Quiz à jour.")
+    afficher("Quizz à jour.")
     return quiz
 
 
@@ -945,7 +944,22 @@ EQUIPES = [{"nom": "Rouges", "couleur": "#e5486b"}, {"nom": "Bleus", "couleur": 
 SERIE_BONUS, SERIE_BONUS_MAX = 100, 500
 JOURNAL_DETAILLE = True                                   # une ligne par question dans journal.txt                  # +100 par bonne réponse de suite (à partir de 2), 500 max
 CHAMPS_JOUEUR = ("jeton", "pseudo", "score", "arrivee", "equipe", "serie", "bonnes", "serie_max", "plus_rapide",
-                 "repondues")
+                 "repondues", "rates_consecutifs", "pouvoir_charge", "malus_suivant", "pouvoir_utilise")
+POUVOIRS = {
+    "lettres_lentes": {"nom": "Révélation au ralenti", "icone": "🔤",
+                       "description": "Les réponses se dévoilent lettre par lettre.",
+                       "gravite": 100, "duree": None},
+    "tomate": {"nom": "Tomate à l’écran", "icone": "🍅",
+               "description": "Une éclaboussure couvre 35 à 40 % de l’écran pendant 6 secondes.",
+               "gravite": 80, "duree": 6},
+    "brouillard": {"nom": "Brouillard", "icone": "🌫️",
+                   "description": "Un brouillard dense masque les propositions pendant 8 secondes.",
+                   "gravite": 80, "duree": 8},
+    "ecran_cinema": {"nom": "Petit écran de cinéma", "icone": "🎬",
+                     "description": "Un rideau de cinéma couvre la question pendant une ouverture lente de 8 secondes.",
+                     "gravite": 80, "duree": 8},
+}
+POUVOIRS_SANS_CHOIX = {"tomate", "brouillard", "ecran_cinema"}
 
 
 def lire_sauvegarde():
@@ -970,7 +984,9 @@ def points_annee(ecart):
 
 def joueur_neuf(jeton, pseudo, arrivee):
     return {"jeton": jeton, "pseudo": pseudo, "score": 0, "arrivee": arrivee, "dernier": None, "equipe": None,
-            "serie": 0, "bonnes": 0, "serie_max": 0, "plus_rapide": None, "repondues": 0, "rang_avant": None}
+            "serie": 0, "bonnes": 0, "serie_max": 0, "plus_rapide": None, "repondues": 0, "rang_avant": None,
+            "rates_consecutifs": 0, "pouvoir_charge": False, "malus_suivant": None, "malus_actif": None,
+            "pouvoir_utilise": None}
 
 
 class Partie:
@@ -1119,6 +1135,28 @@ class Partie:
             self._changer()
             return True
 
+    def choisir_pouvoir(self, jeton, pouvoir, cible):
+        with self.verrou:
+            if not all(isinstance(valeur, str) for valeur in (jeton, pouvoir, cible)):
+                return False
+            if self.phase != "resultats" or jeton not in self.joueurs or cible not in self.joueurs:
+                return False
+            joueur, destinataire = self.joueurs[jeton], self.joueurs[cible]
+            if (self.idx + 1 >= len(self.questions) or not joueur["pouvoir_charge"] or cible == jeton
+                    or pouvoir not in POUVOIRS or destinataire.get("malus_suivant")
+                    or destinataire.get("malus_actif")):
+                return False
+            prochaine = self.questions[self.idx + 1]
+            if prochaine.get("type") == "annee" and pouvoir not in POUVOIRS_SANS_CHOIX:
+                return False
+            if (self.nb_equipes and joueur.get("equipe") == destinataire.get("equipe")):
+                return False
+            destinataire["malus_suivant"] = {"id": pouvoir, "nom": POUVOIRS[pouvoir]["nom"]}
+            joueur["pouvoir_charge"] = False
+            joueur["pouvoir_utilise"] = {"nom": POUVOIRS[pouvoir]["nom"], "cible": destinataire["pseudo"]}
+            self._changer()
+            return True
+
     def voter(self, jeton, choix):
         with self.verrou:
             if (self.phase != "question" or self.pause_depuis is not None or jeton not in self.joueurs
@@ -1173,6 +1211,9 @@ class Partie:
         with self.verrou:
             self.idx, self.phase = idx, "question"
             self.votes, self.resultats = {}, None
+            for joueur in self.joueurs.values():
+                joueur["malus_actif"] = joueur.get("malus_suivant")
+                joueur["pouvoir_utilise"] = None
             self.debut = time.monotonic()
             self.pause_depuis = None
             if self.minuteur:
@@ -1220,6 +1261,7 @@ class Partie:
         facteur = 2 if q.get("double") else 1
         for jeton, j in self.joueurs.items():
             j["rang_avant"] = avant[jeton]
+            malus = j.get("malus_actif")
             vote = self.votes.get(jeton)
             gain, bon, d = 0, False, {"choix": None}
             if vote is not None:
@@ -1244,16 +1286,27 @@ class Partie:
             if bon:
                 nb_bons += 1
                 j["serie"] += 1
+                j["rates_consecutifs"] = 0
                 j["bonnes"] += 1
                 j["serie_max"] = max(j["serie_max"], j["serie"])
                 j["plus_rapide"] = vote[1] if j["plus_rapide"] is None else min(j["plus_rapide"], vote[1])
                 bonus = min(SERIE_BONUS * (j["serie"] - 1), SERIE_BONUS_MAX)
             else:
                 j["serie"] = 0
-            d.update(bon=bon, gain=gain + bonus, bonus=bonus, serie=j["serie"], double=facteur == 2)
+                j["rates_consecutifs"] += 1
+            pouvoir_gagne = False
+            if j["rates_consecutifs"] >= 2:
+                if not j["pouvoir_charge"] and self.idx + 1 < len(self.questions):
+                    j["pouvoir_charge"] = True
+                    pouvoir_gagne = True
+                j["rates_consecutifs"] = 0
+            d.update(bon=bon, gain=gain + bonus, bonus=bonus, serie=j["serie"], double=facteur == 2,
+                     pouvoir_gagne=pouvoir_gagne, malus=malus.get("id") if malus else None)
             j["dernier"] = d
             j["score"] += gain + bonus
             gains[jeton] = gain + bonus
+            j["malus_actif"] = None
+            j["malus_suivant"] = None
         if rapide:
             self.joueurs[rapide["jeton"]]["dernier"]["plus_rapide"] = True
             rapide = {k: v for k, v in rapide.items() if k != "jeton"}     # le jeton reste secret
@@ -1262,7 +1315,7 @@ class Partie:
                  " — ".join(x for x in (q["choix"][q["bonne"]]["titre"], q["choix"][q["bonne"]]["artiste"]) if x))
         self.stats[self.idx:] = [{"numero": self.idx + 1, "reponse": bonne, "chanson": q.get("chanson"),
                                   "taux": round(nb_bons / len(self.joueurs), 2) if self.joueurs else 0,
-                                  "rapide": rapide}]
+                                  "rapide": rapide, "scores": {t: j["score"] for t, j in self.joueurs.items()}}]
         self.resultats = {"comptes": comptes, "gains": gains, "rapide": rapide,
                           "proches": [{"pseudo": p, "annee": a, "ecart": e} for e, _, p, a in proches[:5]]}
         self.phase = "resultats"
@@ -1359,6 +1412,34 @@ class Partie:
                                       "serie_max": j["serie_max"],
                                       "plus_rapide": round(j["plus_rapide"], 1) if j["plus_rapide"] is not None
                                       else None} if self.phase == "fin" else None}
+                e["moi"]["malus"] = j.get("malus_actif") if self.phase == "question" else None
+                e["moi"]["pouvoir_charge"] = j["pouvoir_charge"]
+                e["moi"]["pouvoir_utilise"] = j.get("pouvoir_utilise") if self.phase == "resultats" else None
+                e["moi"]["pouvoir_gagne"] = bool(j.get("dernier") and j["dernier"].get("pouvoir_gagne")) \
+                    if self.phase == "resultats" else False
+                if (self.phase == "resultats" and j["pouvoir_charge"]
+                        and self.idx + 1 < len(self.questions)):
+                    prochaine = self.questions[self.idx + 1]
+                    pouvoirs = POUVOIRS.items()
+                    if prochaine.get("type") == "annee":
+                        pouvoirs = ((ident, info) for ident, info in pouvoirs if ident in POUVOIRS_SANS_CHOIX)
+                    e["moi"]["pouvoirs"] = [{"id": ident, **info} for ident, info in pouvoirs]
+                    e["moi"]["cibles"] = [
+                        {"jeton": autre["jeton"], "pseudo": autre["pseudo"]}
+                        for autre in self.joueurs.values()
+                        if autre["jeton"] != jeton and not autre.get("malus_suivant") and not autre.get("malus_actif")
+                        and (not self.nb_equipes or autre.get("equipe") != j.get("equipe"))
+                    ]
+                if self.phase == "fin":
+                    historique_complet = (
+                        len(self.stats) == len(self.questions)
+                        and all(isinstance(x, dict) and isinstance(x.get("scores"), dict) for x in self.stats)
+                    )
+                    e["moi"]["evolution"] = (
+                        [{"numero": 0, "score": 0}] + [
+                            {"numero": x["numero"], "score": x["scores"].get(jeton, 0)} for x in self.stats
+                        ] if historique_complet else []
+                    )
             animateur = self.animateur()
             e["animateur"] = self.joueurs[animateur]["pseudo"] if animateur else None
             if hote:
@@ -1527,18 +1608,7 @@ FICHIERS_LISIBLES = ("reponses.txt", "problemes.txt", "propositions_a_verifier.t
 
 
 def corbeille(chemin):
-    """Envoie un dossier à la corbeille (récupérable), au lieu de l'effacer."""
-    if os.name != "nt":                                  # Mac : la Corbeille du Finder est ~/.Trash
-        poubelle = Path.home() / ".Trash"
-        cible, n = poubelle / Path(chemin).name, 2
-        while cible.exists():
-            cible, n = poubelle / f"{Path(chemin).name} {n}", n + 1
-        try:
-            poubelle.mkdir(exist_ok=True)
-            shutil.move(str(chemin), str(cible))
-        except OSError:
-            raise bt.Erreur(f"Impossible de mettre {Path(chemin).name} à la corbeille (fichier ouvert ailleurs ?).")
-        return
+    """Envoie un dossier à la corbeille de Windows (récupérable), au lieu de l'effacer."""
     import ctypes
     from ctypes import wintypes
 
@@ -1656,13 +1726,6 @@ class Application:
                 # remet à zéro le compte à rebours de mise en veille (et d'extinction de l'écran) de Windows
                 import ctypes
                 ctypes.windll.kernel32.SetThreadExecutionState(0x00000001 | 0x00000002)
-            elif sys.platform == "darwin" and tours % 15 == 0 and self.occupe():
-                # le Mac ne se met pas en veille et garde l'écran allumé pendant 40 s (renouvelé toutes les 30 s)
-                try:
-                    subprocess.Popen(["caffeinate", "-d", "-i", "-t", "40"], stdout=subprocess.DEVNULL,
-                                     stderr=subprocess.DEVNULL)
-                except OSError:
-                    pass
             if self.tunnel and self.tunnel.poll() is not None:
                 self.tunnel = None
                 if self.url_joueur != self.url_locale:
@@ -1724,7 +1787,7 @@ class Application:
         type_, valeur = bt.detecter_source(r.get("source"))
         oeuvre = {"oui": True, "non": False}.get(r.get("oeuvre"))
         nom = (str(r.get("nom") or "").strip() or "blindtest")[:80]
-        args = bt.reglages(duree=duree, nombre=nombre, debut=debut, video=r.get("usage") != "quiz", nom=nom,
+        args = bt.reglages(duree=duree, nombre=nombre, debut=debut, video=False, nom=nom,
                            oeuvre=oeuvre, melanger=bool(r.get("melanger")), essai=bool(r.get("essai")),
                            exclure_playlists=[str(x) for x in r.get("exclure_playlists") or []])
         setattr(args, type_, valeur)
@@ -1758,9 +1821,6 @@ class Application:
                             "note": c.get("note")} for c in res["cands"]]}
 
     def fabriquer(self, r):
-        usage = r.get("usage")
-        if usage not in ("quiz", "video", "les_deux"):
-            raise bt.Erreur("Choisissez si ce blind test est pour le quiz, pour la vidéo, ou les deux.")
         try:
             duree = int(r.get("duree"))
             nombre = int(r.get("nombre") or bt.nombre_par_defaut(duree))
@@ -1797,12 +1857,12 @@ class Application:
             notes = list(ap["res"]["notes"])
             if retirer:
                 notes.append(f"{len(retirer)} titres retirés à la main dans l'aperçu.")
-            for k, v in (("video", usage != "quiz"), ("nom", nom), ("oeuvre", oeuvre), ("essai", bool(r.get("essai")))):
+            for k, v in (("video", False), ("nom", nom), ("oeuvre", oeuvre), ("essai", bool(r.get("essai")))):
                 setattr(args, k, v)
             args.selection = {"cands": cands, "source": ap["res"]["source"], "notes": notes}
             libelle = ap["libelle"]
         else:
-            args = bt.reglages(duree=duree, nombre=nombre, debut=debut, video=usage != "quiz", nom=nom,
+            args = bt.reglages(duree=duree, nombre=nombre, debut=debut, video=False, nom=nom,
                                oeuvre=oeuvre, melanger=bool(r.get("melanger")), essai=bool(r.get("essai")))
             setattr(args, {"theme": "theme", "playlist": "playlist", "spotify": "spotify",
                            "lignes": "lignes"}[type_], valeur)
@@ -1811,17 +1871,16 @@ class Application:
 
         def tache():
             res = bt.lancer(args)
-            if usage != "video":
-                afficher("")
-                try:
-                    preparer_quiz(res["dossier"])
-                except bt.Annule:
-                    raise bt.Annule("Le blind test est bien fabriqué, mais le quiz n'est pas préparé : il le sera "
-                                    "au moment de jouer (1 à 3 min).")
-            a_verifier = infos_lot(res["dossier"])["a_verifier"] if usage != "video" else 0
+            afficher("")
+            try:
+                preparer_quiz(res["dossier"])
+            except bt.Annule:
+                raise bt.Annule("Le blind test est bien fabriqué, mais le quizz n'est pas préparé : il le sera "
+                                "au moment de jouer (1 à 3 min).")
+            a_verifier = infos_lot(res["dossier"])["a_verifier"]
             return {"lot": chemin_relatif(res["dossier"]), "nombre": res["nombre"], "demandes": res["demandes"],
-                    "video": res["video"].name if res["video"] else None, "notes": len(res["notes"]),
-                    "archive": res["archive"].name if res["archive"] else None, "quiz": usage != "video",
+                    "notes": len(res["notes"]), "archive": res["archive"].name if res["archive"] else None,
+                    "quiz": True,
                     "a_verifier": a_verifier}
 
         return self.lancer_tache(f"Fabrication : {nombre} extraits de {duree} s ({libelle})", tache)
@@ -1922,7 +1981,7 @@ class Application:
             bt.reecrire_reponses(d, lot)
             self.apres_retouche(d, changes)
             if (d / "quiz.json").exists() and not self.fabrication.occupee():
-                self.lancer_tache(f"Mise à jour du quiz ({len(changes)} question(s))", lambda: self.actualiser_quiz_lot(d))
+                self.lancer_tache(f"Mise à jour du quizz ({len(changes)} question(s))", lambda: self.actualiser_quiz_lot(d))
         return {"modifiees": changes}
 
     def remplacer(self, r):
@@ -1944,18 +2003,6 @@ class Application:
             return {"lot": chemin_relatif(d), "remplace": n, "texte": bt.texte_reponse(nouveau)}
 
         return self.lancer_tache(f"Remplacement de la question {n:02d}", tache)
-
-    def refaire_video(self, r):
-        d = trouver_lot(str(r.get("lot") or ""))
-        video = next(d.glob("*.mp4"), None)
-        nom = video.stem if video else (lire_meta(d).get("nom") or "blindtest")
-
-        def tache():
-            sortie = bt.video_seule(duree_lot(d), nom, None, True, dest=d)
-            ecrire_meta(d, video_perimee=None)
-            return {"lot": chemin_relatif(d), "video": sortie.name}
-
-        return self.lancer_tache(f"Montage de la vidéo ({infos_lot(d)['nom']})", tache)
 
     def garder_essai(self, r):
         d = trouver_lot(str(r.get("lot") or ""))
@@ -2073,7 +2120,7 @@ class Application:
             cles = {"pochette"} | ({mode} if mode in ("annee", "langue", "pays") else set())
             immediat = all(k in q for q in quiz_fichier["questions"] for k in cles)
         if not immediat:
-            raise bt.Erreur("Une fabrication est en cours : ce blind test demande une préparation (quiz, pochettes, "
+            raise bt.Erreur("Une fabrication est en cours : ce blind test demande une préparation (quizz, pochettes, "
                             "données du mode ou accès Internet). Attendez la fin de la fabrication, ou annulez-la.")
         quiz = {"questions": reprise["questions"]} if reprise else self.preparer_partie(dossier, mode)
         if internet:
@@ -2194,6 +2241,8 @@ def fabriquer_gestionnaire(app):
         def do_GET(self):
             u = urlparse(self.path)
             q = parse_qs(u.query)
+            if u.path == "/qrcode.min.js":
+                return self._fichier(DOSSIER_PAGES / "qrcode.min.js", "application/javascript; charset=utf-8")
             if u.path in ("/", "/joueur"):
                 return self._fichier(DOSSIER_PAGES / "joueur.html", "text/html; charset=utf-8")
             if u.path == "/ecran":
@@ -2311,11 +2360,17 @@ def fabriquer_gestionnaire(app):
                 corps = self._lire_corps(200_000)             # une liste de titres collée peut être longue
                 try:
                     actions = {"/atelier/apercu": app.apercu, "/atelier/lot/modifier": app.modifier_lot,
-                               "/atelier/lot/remplacer": app.remplacer, "/atelier/lot/video": app.refaire_video,
+                               "/atelier/lot/remplacer": app.remplacer,
                                "/atelier/lot/garder": app.garder_essai, "/atelier/lot/renommer": app.renommer,
                                "/atelier/lot/supprimer": app.supprimer}
                     if u.path in actions:
                         return self._json(dict(actions[u.path](corps) or {}, ok=True))
+                    if u.path == "/atelier/connexion":
+                        try:
+                            bt.api("/search?q=Daft%20Punk&limit=1")
+                        except (bt.Erreur, bt.Introuvable) as e:
+                            return self._json({"erreur": f"Accès à Deezer indisponible : {e}"}, 503)
+                        return self._json({"ok": True})
                     if u.path == "/atelier/fabriquer":
                         app.fabriquer(corps)
                     elif u.path == "/atelier/jouer":
@@ -2324,8 +2379,8 @@ def fabriquer_gestionnaire(app):
                         app.oublier_reprise()
                     elif u.path == "/atelier/annuler":
                         app.fabrication.annuler()
-                    elif u.path == "/atelier/ouvrir":       # le dossier du lot (Explorateur, Finder)
-                        ouvrir_dossier(trouver_lot(str(corps.get("lot") or "")))
+                    elif u.path == "/atelier/ouvrir":       # le dossier du lot dans l'Explorateur Windows
+                        os.startfile(trouver_lot(str(corps.get("lot") or "")))
                     elif u.path == "/atelier/quitter":
                         self._json({"ok": True})
                         threading.Timer(0.5, app.arret.set).start()
@@ -2360,6 +2415,11 @@ def fabriquer_gestionnaire(app):
             if u.path == "/equipe":
                 ok = bool(partie) and partie.choisir_equipe(corps.get("jeton"), corps.get("equipe"))
                 return self._json({"ok": ok})
+            if u.path == "/pouvoir":
+                ok = bool(partie) and partie.choisir_pouvoir(
+                    corps.get("jeton"), corps.get("pouvoir"), corps.get("cible")
+                )
+                return self._json({"ok": ok}, 200 if ok else 400)
             if u.path == "/voter":
                 ok = bool(partie) and partie.voter(corps.get("jeton"), corps.get("choix"))
                 return self._json({"ok": ok})
@@ -2382,30 +2442,30 @@ def fabriquer_gestionnaire(app):
     return Gestionnaire
 
 
-def ouvrir_dossier(chemin):
-    if os.name == "nt":
-        os.startfile(chemin)
-    else:
-        subprocess.Popen(["open" if sys.platform == "darwin" else "xdg-open", str(chemin)])
-
-
 def trouver_cloudflared():
-    candidats = []
-    if os.name == "nt":
-        candidats = [Path(os.environ.get("ProgramFiles(x86)", "")) / "cloudflared" / "cloudflared.exe",
-                     Path(os.environ.get("ProgramFiles", "")) / "cloudflared" / "cloudflared.exe"]
-        candidats += list((Path(os.environ.get("LOCALAPPDATA", "")) / "Microsoft" / "WinGet" / "Packages")
-                          .glob("Cloudflare.cloudflared*/**/cloudflared*.exe"))
-    return bt.chercher_programme("cloudflared", candidats)
+    bundled = bt.RESOURCE_BASE / "cloudflared.exe"
+    if bundled.is_file():
+        return str(bundled)
+    chemin = shutil.which("cloudflared")
+    if chemin:
+        return chemin
+    candidats = [Path(os.environ.get("ProgramFiles(x86)", "")) / "cloudflared" / "cloudflared.exe",
+                 Path(os.environ.get("ProgramFiles", "")) / "cloudflared" / "cloudflared.exe",
+                 bt.BASE / "cloudflared.exe"]
+    candidats += list((Path(os.environ.get("LOCALAPPDATA", "")) / "Microsoft" / "WinGet" / "Packages")
+                      .glob("Cloudflare.cloudflared*/**/cloudflared*.exe"))
+    return next((str(c) for c in candidats if c.is_file()), None)
 
 
 # ---------- Adresse publique fixe (Tailscale Funnel) ----------
 # Gratuit, même adresse à chaque soirée (https://<pc>.<réseau>.ts.net) : le QR code ne change plus.
 
 def trouver_tailscale():
-    return bt.chercher_programme("tailscale", [
-        Path(os.environ.get("ProgramFiles", r"C:\Program Files")) / "Tailscale" / "tailscale.exe",
-        Path("/Applications/Tailscale.app/Contents/MacOS/Tailscale")])        # application Mac
+    chemin = shutil.which("tailscale")
+    if chemin:
+        return chemin
+    exe = Path(os.environ.get("ProgramFiles", r"C:\Program Files")) / "Tailscale" / "tailscale.exe"
+    return str(exe) if exe.is_file() else None
 
 
 def tailscale(*args, delai=30):
@@ -2471,24 +2531,15 @@ def lancer_tunnel(port):
     Renvoie (processus, adresse). Le processus doit rester en vie pendant toute la partie."""
     exe = trouver_cloudflared()
     if not exe:
-        raise bt.Erreur("cloudflared est introuvable. Installez-le dans le Terminal avec : brew install cloudflared" if os.name != "nt" else
-                        "cloudflared est introuvable. Installez-le avec : winget install Cloudflare.cloudflared")
+        raise bt.Erreur("cloudflared est introuvable. Installez-le avec : winget install Cloudflare.cloudflared")
     afficher("Ouverture de l'accès Internet (tunnel Cloudflare)...")
     # fenêtre fermée d'un coup la fois précédente : le tunnel a pu rester ouvert, on le ferme
     fichier_pid = bt.BASE / "_tunnel.pid"
     if fichier_pid.exists():
         ancien = fichier_pid.read_text().strip()
         if ancien.isdigit():
-            if os.name == "nt":
-                subprocess.run(["taskkill", "/PID", ancien, "/F", "/FI", "IMAGENAME eq cloudflared*"],
-                               capture_output=True)
-            else:                                        # Mac : seulement si ce numéro est bien un cloudflared
-                r = subprocess.run(["ps", "-p", ancien, "-o", "comm="], capture_output=True, text=True)
-                if "cloudflared" in r.stdout:
-                    try:
-                        os.kill(int(ancien), signal.SIGTERM)
-                    except OSError:
-                        pass
+            subprocess.run(["taskkill", "/PID", ancien, "/F", "/FI", "IMAGENAME eq cloudflared*"],
+                           capture_output=True)
     proc = subprocess.Popen([exe, "tunnel", "--no-autoupdate", "--url", f"http://localhost:{port}"],
                             stdout=subprocess.DEVNULL, stderr=subprocess.PIPE, text=True,
                             encoding="utf-8", errors="replace",
@@ -2613,20 +2664,13 @@ def ouvrir_journal():
     except OSError:
         return
     sys.stdout, sys.stderr = Double(sys.stdout, f), Double(sys.stderr, f)
-    print("\n" + "-" * 30 + f" démarrage (Python {sys.version.split()[0]}, pid {os.getpid()}) " + "-" * 30, flush=True)
+    contexte = "application Windows" if getattr(sys, "frozen", False) else f"Python {sys.version.split()[0]}, pid {os.getpid()}"
+    print("\n" + "-" * 30 + f" démarrage ({contexte}) " + "-" * 30, flush=True)
 
 
 def surveiller_fermeture(app):
     """Fenêtre noire fermée avec la croix : on le note dans le journal et on ferme proprement l'accès Internet."""
     if os.name != "nt":
-        def fermeture(signum, frame):
-            print("\nArrêt : " + "fenêtre fermée" + ".", flush=True)
-            try:
-                app.fermer()
-            finally:
-                os._exit(0)
-        for sig in (signal.SIGHUP, signal.SIGTERM):
-            signal.signal(sig, fermeture)
         return None
     import ctypes
 
@@ -2695,6 +2739,16 @@ def main():
         sys.stdout.reconfigure(errors="replace")
     except AttributeError:
         pass
+    try:
+        bt.BASE.mkdir(parents=True, exist_ok=True)
+    except OSError as e:
+        message = f"ERREUR : impossible de créer le dossier de données {bt.BASE} : {e}"
+        if sys.stderr is not None:
+            print(message, file=sys.stderr)
+        if getattr(sys, "frozen", False) and os.name == "nt":
+            import ctypes
+            ctypes.windll.user32.MessageBoxW(None, message, "Blind test", 0x10)
+        sys.exit(1)
     ouvrir_journal()
     # erreur dans un fil d'arrière-plan (fin du temps d'une question, tunnel...) : notée au lieu de passer inaperçue
     threading.excepthook = lambda a: print(f"\nERREUR dans un fil d'arrière-plan ({a.thread.name if a.thread else '?'}) :\n"
@@ -2748,8 +2802,7 @@ def main():
             afficher("  Arrêter la partie : fermez cette fenêtre ou Ctrl+C")
             afficher("=" * 64)
             if not args.internet:
-                afficher("Si le Mac demande d'accepter les connexions entrantes pour Python : cliquez sur « Autoriser »." if os.name != "nt" else
-                         "Si Windows demande l'autorisation du pare-feu : cochez « Réseaux privés » et autorisez.")
+                afficher("Si Windows demande l'autorisation du pare-feu : cochez « Réseaux privés » et autorisez.")
             if not args.sans_navigateur:
                 webbrowser.open(app.url_ecran)
         else:
@@ -2760,27 +2813,35 @@ def main():
             afficher("  Laissez cette fenêtre ouverte (vous pouvez la réduire).")
             afficher("  Pour tout arrêter : bouton « Quitter » de la page, ou fermez cette fenêtre.")
             afficher("=" * 64)
-            afficher("Si le Mac demande d'accepter les connexions entrantes pour Python : cliquez sur « Autoriser »." if os.name != "nt" else
-                     "Si Windows demande l'autorisation du pare-feu : cochez « Réseaux privés » et autorisez.")
+            afficher("Si Windows demande l'autorisation du pare-feu : cochez « Réseaux privés » et autorisez.")
             if not args.sans_navigateur:
                 webbrowser.open(app.url_atelier)
         while not app.arret.wait(1):
             pass
         afficher("\nBlind test arrêté (bouton « Quitter » de l'atelier).")
-    except bt.Erreur as e:
-        afficher(f"\nERREUR : {e}")
-        if interactif or not console:
+    except (bt.Erreur, bt.Introuvable) as e:
+        message = f"ERREUR : {e}"
+        afficher(f"\n{message}")
+        if getattr(sys, "frozen", False) and os.name == "nt":
+            import ctypes
+            ctypes.windll.user32.MessageBoxW(None, message, "Blind test", 0x10)
+        elif interactif or not console:
             input("\nAppuyez sur Entrée pour fermer...")
         sys.exit(1)
     except KeyboardInterrupt:
         afficher("\nBlind test arrêté (Ctrl+C).")
     except Exception:
         traceback.print_exc()
-        afficher(f"\nERREUR inattendue : le blind test s'est arrêté. Le détail est dans {FICHIER_JOURNAL}.")
-        try:
-            input("\nAppuyez sur Entrée pour fermer...")
-        except (EOFError, OSError):
-            pass
+        message = f"Erreur inattendue : le blind test s'est arrêté. Le détail est dans {FICHIER_JOURNAL}."
+        afficher(f"\n{message}")
+        if getattr(sys, "frozen", False) and os.name == "nt":
+            import ctypes
+            ctypes.windll.user32.MessageBoxW(None, message, "Blind test", 0x10)
+        else:
+            try:
+                input("\nAppuyez sur Entrée pour fermer...")
+            except (EOFError, OSError):
+                pass
         sys.exit(1)
     finally:
         if app:
