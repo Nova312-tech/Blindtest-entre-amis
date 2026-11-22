@@ -23,6 +23,16 @@ jobs:
           winget install --id Gyan.FFmpeg -e --accept-package-agreements --accept-source-agreements
           winget install --id Cloudflare.cloudflared -e --accept-package-agreements --accept-source-agreements
           winget install --id JRSoftware.InnoSetup -e --accept-package-agreements --accept-source-agreements
+          $links = Join-Path $env:LOCALAPPDATA "Microsoft\WinGet\Links"
+          $env:PATH = "$links;$env:PATH"
+          Add-Content -Path $env:GITHUB_PATH -Value $links
+          Add-Content -Path $env:GITHUB_PATH -Value "${env:ProgramFiles(x86)}\cloudflared"
+          Add-Content -Path $env:GITHUB_PATH -Value "$env:LOCALAPPDATA\Programs\Inno Setup 6"
+      - name: Verify build tools
+        shell: pwsh
+        run: |
+          Get-Command ffmpeg.exe, ffprobe.exe, cloudflared.exe, ISCC.exe |
+            Select-Object Name,Source
       - name: Install PyInstaller
         run: python -m pip install -r requirements-build.txt
       - name: Run tests
